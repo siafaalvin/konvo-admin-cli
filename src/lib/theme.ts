@@ -48,9 +48,10 @@ export const c = {
 };
 
 // ─── Konvo wordmark for the boot intro ─────────────────────────────────
-// Gradient from brand orange through navySoft to navy — mirrors the
-// Aurora theme used in the PWA (warm accent fading into deep navy).
-const brandGradient = gradient(palette.brand, palette.navySoft, palette.navy);
+// Gradient from brand orange → brandSoft → white. Reads as warm
+// accent fading into the brightest tone — high contrast in any
+// terminal background.
+const brandGradient = gradient(palette.brand, palette.brandSoft, palette.white);
 
 /** Returns a multi-line ASCII wordmark with brand gradient applied. */
 export function wordmark(): string {

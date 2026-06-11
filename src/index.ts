@@ -28,10 +28,12 @@ import inspectUser from './runbooks/inspect-user.ts';
 import tailWorkerLogs from './runbooks/tail-worker-logs.ts';
 import smokeTest from './runbooks/smoke-test.ts';
 import restartService from './runbooks/restart-service.ts';
+import confirmStuckUser from './runbooks/confirm-stuck-user.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
   inspectUser,
+  confirmStuckUser,
   tailWorkerLogs,
   restartService,
   setPostgresGuc,
@@ -42,7 +44,8 @@ async function main(): Promise<number> {
   const config = loadConfig();
   const dryRun = process.argv.includes('--dry-run');
 
-  // Branded boot — gradient ASCII wordmark + tagline.
+  // Branded boot — gradient ASCII wordmark + tagline. Printed once,
+  // not on every loop iteration.
   console.log('\n' + wordmark());
   console.log(tagline() + '\n');
 
@@ -58,46 +61,64 @@ async function main(): Promise<number> {
     'Config'
   );
 
-  // ─── Pick a runbook ───────────────────────────────────────────────────
-  const choice = await p.select({
-    message: 'Choose a runbook',
-    options: RUNBOOKS.map((r) => ({
-      value: r.id,
-      label: `${riskBadge(r.risk)}  ${c.white(r.title)}`,
-      hint:  c.dim(r.description)
-    }))
-  });
-
-  if (p.isCancel(choice)) {
-    p.cancel('Cancelled.');
-    return 0;
-  }
-
-  const runbook = RUNBOOKS.find((r) => r.id === choice);
-  if (!runbook) {
-    p.outro(c.red(`Unknown runbook id: ${choice}`));
-    return 1;
-  }
-
-  // ─── Dispatch ────────────────────────────────────────────────────────
   const ctx: RunbookContext = { config, prompt: p, dryRun };
-  let success = false;
-  let summary = 'unknown failure';
-  try {
-    const res = await runbook.run(ctx);
-    success = res.success;
-    summary = res.summary;
-  } catch (err) {
-    success = false;
-    summary = err instanceof Error ? err.message : String(err);
-  }
+  let lastExitCode = 0;
 
-  if (success) {
-    p.outro(c.green(`✓ ${summary}`));
-    return 0;
+  // ─── Menu loop ────────────────────────────────────────────────────────
+  // Stays inside the picker until the operator chooses "Exit" or
+  // cancels at the menu level (Ctrl+C / Esc on the picker itself).
+  // Cancelling INSIDE a runbook just returns to this menu.
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const choice = await p.select({
+      message: 'Choose a runbook',
+      options: [
+        ...RUNBOOKS.map((r) => ({
+          value: r.id,
+          label: `${riskBadge(r.risk)}  ${c.white(r.title)}`,
+          hint:  c.dim(r.description)
+        })),
+        {
+          value: '__exit',
+          label: c.dim('Exit'),
+          hint:  c.dim('Quit konvo-admin-cli')
+        }
+      ]
+    });
+
+    if (p.isCancel(choice) || choice === '__exit') {
+      p.outro(c.dim('Bye.'));
+      return lastExitCode;
+    }
+
+    const runbook = RUNBOOKS.find((r) => r.id === choice);
+    if (!runbook) {
+      p.note(c.red(`Unknown runbook id: ${choice}`), 'Error');
+      lastExitCode = 1;
+      continue;
+    }
+
+    // ─── Dispatch ────────────────────────────────────────────────────
+    let success = false;
+    let summary = 'unknown failure';
+    try {
+      const res = await runbook.run(ctx);
+      success = res.success;
+      summary = res.summary;
+    } catch (err) {
+      success = false;
+      summary = err instanceof Error ? err.message : String(err);
+    }
+
+    // Inline summary so we stay in the loop. Don't call p.outro here —
+    // outro closes the prompt session and we want to keep going.
+    if (success) {
+      p.note(c.green(`✓ ${summary}`), 'Result');
+    } else {
+      p.note(c.red(`✗ ${summary}`), 'Result');
+      lastExitCode = 1;
+    }
   }
-  p.outro(c.red(`✗ ${summary}`));
-  return 1;
 }
 
 const exitCode = await main();
