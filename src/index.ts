@@ -33,6 +33,9 @@ import bulkInsertCrowdfund from './runbooks/bulk-insert-crowdfund.ts';
 import applyPhaseDConfig from './runbooks/apply-phase-d-config.ts';
 import refundRevoke from './runbooks/refund-revoke.ts';
 import rotateStripeKeys from './runbooks/rotate-stripe-keys.ts';
+import openSuperuserPsql from './runbooks/open-superuser-psql.ts';
+import inspectDatabaseGucs from './runbooks/inspect-database-gucs.ts';
+import verifyWorkerEnv from './runbooks/verify-worker-env.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -45,6 +48,9 @@ const RUNBOOKS: Runbook[] = [
   refundRevoke,
   rotateStripeKeys,
   setPostgresGuc,
+  inspectDatabaseGucs,
+  verifyWorkerEnv,
+  openSuperuserPsql,
   openDashboard
 ];
 
