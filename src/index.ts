@@ -22,10 +22,12 @@ import type { Runbook, RunbookContext } from './runbooks/_interface.ts';
 // presentation order in the picker.
 import openDashboard from './runbooks/open-dashboard.ts';
 import setPostgresGuc from './runbooks/set-postgres-guc.ts';
+import inspectUser from './runbooks/inspect-user.ts';
 
 const RUNBOOKS: Runbook[] = [
-  openDashboard,
-  setPostgresGuc
+  inspectUser,
+  setPostgresGuc,
+  openDashboard
 ];
 
 const RISK_BADGE: Record<Runbook['risk'], string> = {
