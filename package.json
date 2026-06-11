@@ -1,0 +1,23 @@
+{
+  "name": "konvo-admin-cli",
+  "version": "0.1.0",
+  "description": "Konvo operator runbooks — interactive CLI for production ops tasks. See planning/houvox/KONVO-ADMIN-CLI.md in the houvox-pwa repo for the full plan.",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "konvo-admin": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.5.1",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "typescript": "^5.9.3"
+  }
+}
