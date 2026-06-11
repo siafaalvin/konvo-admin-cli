@@ -4,10 +4,11 @@
  *
  * Boot:
  *   1. Load .env via Bun's automatic loader (no dotenv needed).
- *   2. Compose RunbookContext from config + @clack/prompts + dryRun flag.
- *   3. Show the runbook picker.
- *   4. Dispatch to the chosen runbook's run(ctx).
- *   5. Render summary + exit code.
+ *   2. Print branded wordmark (lib/theme.ts).
+ *   3. Compose RunbookContext from config + @clack/prompts + dryRun flag.
+ *   4. Show the runbook picker.
+ *   5. Dispatch to the chosen runbook's run(ctx).
+ *   6. Render summary + exit code.
  *
  * --dry-run flag: appended to argv when set; mutating runbooks branch
  * on ctx.dryRun and skip the actual change.
@@ -15,6 +16,7 @@
 
 import * as p from '@clack/prompts';
 import { loadConfig } from './lib/config.ts';
+import { wordmark, tagline, riskBadge, c } from './lib/theme.ts';
 import type { Runbook, RunbookContext } from './runbooks/_interface.ts';
 
 // ─── Runbook registry ───────────────────────────────────────────────────────
@@ -30,26 +32,22 @@ const RUNBOOKS: Runbook[] = [
   openDashboard
 ];
 
-const RISK_BADGE: Record<Runbook['risk'], string> = {
-  'read-only': '·',
-  'low':       '!',
-  'high':      '!!'
-};
-
 async function main(): Promise<number> {
   const config = loadConfig();
   const dryRun = process.argv.includes('--dry-run');
 
-  p.intro('konvo-admin-cli v0.1.0');
+  // Branded boot — gradient ASCII wordmark + tagline.
+  console.log('\n' + wordmark());
+  console.log(tagline() + '\n');
 
   if (dryRun) {
-    p.note('Dry-run mode — mutating runbooks will skip actual changes.', 'Mode');
+    p.note(c.yellow('Dry-run mode — mutating runbooks will skip actual changes.'), 'Mode');
   }
   p.note(
     [
-      `Operator: ${config.operator}`,
-      `Prod host: ${config.prodHost}`,
-      `SSH key:   ${config.sshKey}`
+      `Operator: ${c.brand(config.operator)}`,
+      `Prod host: ${c.body(config.prodHost)}`,
+      `SSH key:   ${c.body(config.sshKey)}`
     ].join('\n'),
     'Config'
   );
@@ -59,8 +57,8 @@ async function main(): Promise<number> {
     message: 'Choose a runbook',
     options: RUNBOOKS.map((r) => ({
       value: r.id,
-      label: `${RISK_BADGE[r.risk]}  ${r.title}`,
-      hint:  r.description
+      label: `${riskBadge(r.risk)}  ${c.white(r.title)}`,
+      hint:  c.dim(r.description)
     }))
   });
 
@@ -71,7 +69,7 @@ async function main(): Promise<number> {
 
   const runbook = RUNBOOKS.find((r) => r.id === choice);
   if (!runbook) {
-    p.outro(`Unknown runbook id: ${choice}`);
+    p.outro(c.red(`Unknown runbook id: ${choice}`));
     return 1;
   }
 
@@ -89,10 +87,10 @@ async function main(): Promise<number> {
   }
 
   if (success) {
-    p.outro(`✓ ${summary}`);
+    p.outro(c.green(`✓ ${summary}`));
     return 0;
   }
-  p.outro(`✗ ${summary}`);
+  p.outro(c.red(`✗ ${summary}`));
   return 1;
 }
 
