@@ -1,5 +1,15 @@
 name: CI
 
+# konvo-admin-cli CI: type-check + theme preview render.
+#
+# Currently fails to start due to account-level GitHub Actions
+# minute quota on the personal plan. The workflow itself is valid
+# (verified by minimal repro that also failed identically) — runs
+# will succeed automatically once the account either:
+#   1. enables pay-as-you-go Actions billing, or
+#   2. converts this repo to public (unlimited minutes), or
+#   3. waits for monthly quota reset.
+
 on:
   push:
     branches: [main]
@@ -13,8 +23,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun run src/scripts/preview-theme.ts > /dev/null
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Type check
+        run: bun run check
+
+      - name: Theme preview (sanity)
+        # Standalone script, no stdin/tty required, just confirms
+        # lib/theme.ts can render without throwing.
+        run: bun run src/scripts/preview-theme.ts > /dev/null
