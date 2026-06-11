@@ -18,51 +18,8 @@
  */
 
 import { exec, streamExec } from '../lib/ssh.ts';
+import { SERVICES } from '../lib/services.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
-
-/**
- * Service catalog. Each entry is a friendly label + a regex that
- * matches the actual container name as `docker ps` reports it. The
- * regex is anchored so we don't match unrelated containers.
- */
-const SERVICES: Array<{ value: string; label: string; pattern: string; hint: string }> = [
-  {
-    value:   'worker',
-    label:   'konvo-worker-prod',
-    pattern: '^konvo-worker-prod$',
-    hint:    'Background jobs, geofence-v2 scheduler, dispatch'
-  },
-  {
-    value:   'centrifugo',
-    label:   'konvo-centrifugo-prod',
-    pattern: '^konvo-centrifugo-prod$',
-    hint:    'Realtime websocket — chat fan-out'
-  },
-  {
-    value:   'supabase-db',
-    label:   'supabase-db (Postgres)',
-    pattern: '^supabase-db-',
-    hint:    'Postgres logs — queries, errors, replication'
-  },
-  {
-    value:   'supabase-auth',
-    label:   'supabase-auth',
-    pattern: '^supabase-auth-',
-    hint:    'GoTrue — sign-up, sign-in, password reset'
-  },
-  {
-    value:   'supabase-rest',
-    label:   'supabase-rest (PostgREST)',
-    pattern: '^supabase-rest-',
-    hint:    'REST API surface'
-  },
-  {
-    value:   'supabase-storage',
-    label:   'supabase-storage',
-    pattern: '^supabase-storage-',
-    hint:    'Document uploads, storage API'
-  }
-];
 
 const runbook: Runbook = {
   id:          'tail-worker-logs',
@@ -77,13 +34,13 @@ const runbook: Runbook = {
     // 1. Pick a service.
     const choice = await prompt.select({
       message: 'Which service?',
-      options: SERVICES.map((s) => ({ value: s.value, label: s.label, hint: s.hint }))
+      options: SERVICES.map((s) => ({ value: s.id, label: s.label, hint: s.hint }))
     });
     if (prompt.isCancel(choice)) {
       prompt.cancel('Cancelled.');
       return { success: false, summary: 'Operator cancelled.' };
     }
-    const service = SERVICES.find((s) => s.value === choice)!;
+    const service = SERVICES.find((s) => s.id === choice)!;
 
     // 2. History size.
     const tailIn = await prompt.text({
@@ -126,7 +83,7 @@ const runbook: Runbook = {
       return {
         success: false,
         summary: `No running container matched /${service.pattern}/.`,
-        details: { service: service.value }
+        details: { service: service.id }
       };
     }
     const containerName = psRes.stdout.trim();
