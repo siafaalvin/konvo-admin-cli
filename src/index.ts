@@ -26,8 +26,10 @@ import openDashboard from './runbooks/open-dashboard.ts';
 import setPostgresGuc from './runbooks/set-postgres-guc.ts';
 import inspectUser from './runbooks/inspect-user.ts';
 import tailWorkerLogs from './runbooks/tail-worker-logs.ts';
+import smokeTest from './runbooks/smoke-test.ts';
 
 const RUNBOOKS: Runbook[] = [
+  smokeTest,
   inspectUser,
   tailWorkerLogs,
   setPostgresGuc,
