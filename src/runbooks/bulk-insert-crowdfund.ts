@@ -26,8 +26,9 @@
  */
 
 import { existsSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, basename } from 'node:path';
 import { psqlPiped } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import { c } from '../lib/theme.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
 
@@ -240,6 +241,26 @@ const runbook: Runbook = {
     const m = res.stdout.match(/INSERTED=(\d+)/);
     const newCount   = m ? parseInt(m[1]!, 10) : -1;
     const dupCount   = newCount >= 0 ? parsed.emails.length - newCount : -1;
+
+    // Audit — log the file basename + counts. Email list NOT logged
+    // (potentially sensitive PII; only counts go in metadata).
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'bulk-insert-crowdfund',
+      action:    'crowdfund-emails-inserted',
+      target:    `${campaign}:${basename(csvPath)}`,
+      metadata:  {
+        campaign,
+        csvPath,
+        parsed:    parsed.emails.length,
+        invalid:   parsed.invalid.length,
+        inserted:  newCount,
+        duplicate: dupCount
+      },
+      dryRun: ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note(c.yellow(`Audit log write failed (operation succeeded): ${audit.error}`), 'Warning');
+    }
 
     return {
       success: true,

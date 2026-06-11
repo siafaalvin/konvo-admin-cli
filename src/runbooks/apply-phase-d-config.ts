@@ -40,6 +40,7 @@
  */
 
 import { psqlPiped } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import { c } from '../lib/theme.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
 
@@ -294,6 +295,25 @@ const runbook: Runbook = {
       ].join('\n'),
       'Reminder'
     );
+
+    // Audit log — record what changed; never log secret value.
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'apply-phase-d-config',
+      action:    'phase-d-config-applied',
+      target:    urlChanged && secretChanged ? 'url+secret' : urlChanged ? 'url' : 'secret',
+      metadata:  {
+        urlChanged,
+        secretChanged,
+        urlBefore: urlChanged ? current.workerUrl : undefined,
+        urlAfter:  urlChanged ? newUrl : undefined,
+        secretLengthBefore: current.secretLength,
+        secretLengthAfter:  after.secretLength
+      },
+      dryRun: ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note(c.yellow(`Audit log write failed (operation succeeded): ${audit.error}`), 'Warning');
+    }
 
     return {
       success: true,

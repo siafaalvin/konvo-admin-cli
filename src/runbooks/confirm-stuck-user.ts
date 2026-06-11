@@ -28,6 +28,7 @@
  */
 
 import { psqlPiped } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import { c } from '../lib/theme.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
 
@@ -299,6 +300,18 @@ const runbook: Runbook = {
     const after = await diagnose(ctx, email);
     sp3.stop('Re-check complete.');
     prompt.note(renderDiagnosis(after), 'After fix');
+
+    // Audit — record the fix applied + user id (target).
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'confirm-stuck-user',
+      action:    `fix-applied:${fix.id}`,
+      target:    d.userId ?? email,
+      metadata:  { email, fixId: fix.id, before: d, after },
+      dryRun:    ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note(c.yellow(`Audit log write failed (operation succeeded): ${audit.error}`), 'Warning');
+    }
 
     return {
       success: true,

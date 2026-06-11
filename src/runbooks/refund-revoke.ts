@@ -28,6 +28,7 @@
  */
 
 import { psqlPiped } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import { c } from '../lib/theme.ts';
 import {
   findCustomerByEmail,
@@ -313,6 +314,26 @@ const runbook: Runbook = {
           }
         }
       }
+    }
+
+    // Audit — record what happened. Stripe payment intent id is
+    // logged as the target for traceability; the email is in metadata.
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'refund-revoke',
+      action:    refundedPi ? 'refund-and-revoke' : 'revoke-only',
+      target:    refundedPi ?? email,
+      metadata:  {
+        email,
+        userId:        user.userId,
+        accessMethod:  user.accessMethod,
+        refundedPi,
+        refundedAmountCents: refundedAmount,
+        stripeMode: mode
+      },
+      dryRun: ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note(c.yellow(`Audit log write failed (operation succeeded): ${audit.error}`), 'Warning');
     }
 
     return {

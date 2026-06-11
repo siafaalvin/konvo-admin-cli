@@ -36,6 +36,7 @@
 
 import Stripe from 'stripe';
 import { exec } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import { openInBrowser, findDashboard } from '../lib/dashboards.ts';
 import { c } from '../lib/theme.ts';
 import { stripeMode } from '../lib/stripe.ts';
@@ -331,6 +332,22 @@ const runbook: Runbook = {
       message: 'Old key deleted in Stripe?',
       initialValue: false
     });
+
+    // Audit — never log key value, just mode + deletion confirmation.
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'rotate-stripe-keys',
+      action:    'stripe-key-rotated',
+      target:    `${currentMode}-to-${newKeyMode}`,
+      metadata:  {
+        previousMode:    currentMode,
+        newMode:         newKeyMode,
+        oldKeyDeleted:   !!oldKeyDeleted
+      },
+      dryRun: ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note(c.yellow(`Audit log write failed (operation succeeded): ${audit.error}`), 'Warning');
+    }
 
     return {
       success: true,

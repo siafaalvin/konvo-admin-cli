@@ -19,6 +19,7 @@
  */
 
 import { exec } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import { restartableServices } from '../lib/services.ts';
 import { c } from '../lib/theme.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
@@ -148,6 +149,19 @@ const runbook: Runbook = {
         details: { containerName, lastStatus }
       };
     }
+
+    // Audit — record container + final status.
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'restart-service',
+      action:    'service-restarted',
+      target:    containerName,
+      metadata:  { serviceId: service.id, status: lastStatus },
+      dryRun:    ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note(`Audit log write failed (operation succeeded): ${audit.error}`, 'Warning');
+    }
+
     return {
       success: true,
       summary: `Restarted ${containerName} — ${lastStatus}.`,

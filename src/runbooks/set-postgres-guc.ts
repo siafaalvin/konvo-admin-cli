@@ -21,6 +21,7 @@
  */
 
 import { psqlPiped } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
 
 const runbook: Runbook = {
@@ -160,6 +161,18 @@ const runbook: Runbook = {
         summary: `Set succeeded but verification length mismatch: stored=${storedLength}, expected=${expectedLength}`,
         details: { paramName, storedLength, expectedLength }
       };
+    }
+
+    // Audit — never log the value, only param name + length.
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'set-postgres-guc',
+      action:    'guc-set',
+      target:    paramName,
+      metadata:  { length: storedLength, looksSecret },
+      dryRun:    ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note('Audit log write failed (operation succeeded): ' + audit.error, 'Warning');
     }
 
     return {

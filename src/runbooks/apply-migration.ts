@@ -28,8 +28,9 @@
  */
 
 import { existsSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, basename } from 'node:path';
 import { psqlPiped } from '../lib/ssh.ts';
+import { writeAudit } from '../lib/audit.ts';
 import { c } from '../lib/theme.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
 
@@ -148,6 +149,18 @@ const runbook: Runbook = {
     // the operator can confirm the expected statements ran.
     if (res.stdout.trim()) {
       prompt.note(res.stdout.trim().slice(0, 4000), 'psql output');
+    }
+
+    // Audit log — best effort, soft failure.
+    const audit = await writeAudit(ctx.config, {
+      runbookId: 'apply-migration',
+      action:    'migration-applied',
+      target:    basename(sqlPath),
+      metadata:  { sqlPath, sizeKb: parseFloat(sizeKb), nonCommentLines: nonComment.length },
+      dryRun:    ctx.dryRun
+    });
+    if (!audit.ok) {
+      prompt.note(c.yellow(`Audit log write failed (operation succeeded): ${audit.error}`), 'Warning');
     }
 
     return {
