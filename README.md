@@ -32,19 +32,21 @@ You'll get an interactive menu of available runbooks.
 
 ## Phase 1 — MVP runbook list
 
-| # | Runbook | Status |
+| # | Runbook | Risk |
 |---|---|---|
-| 1 | Bulk insert crowdfund emails | TODO |
-| 2 | Confirm stuck user signup | TODO |
-| 3 | Inspect user | TODO |
-| 4 | Refund + revoke access | TODO |
-| 5 | Run prod smoke test | TODO |
-| 6 | Tail worker error logs | TODO |
-| 7 | Restart service | TODO |
-| 8 | Apply Phase D notification config | TODO |
-| 9 | Set Postgres GUC | ✅ |
-| 10 | Open dashboard | ✅ |
-| 11 | Rotate Stripe keys | TODO |
+| 1 | Bulk insert crowdfund emails | low |
+| 2 | Confirm stuck user signup | low |
+| 3 | Inspect user | read-only |
+| 4 | Refund + revoke access | high |
+| 5 | Run prod smoke test | read-only |
+| 6 | Tail logs | read-only |
+| 7 | Restart service | low |
+| 8 | Apply Phase D notification config | high |
+| 9 | Set Postgres GUC | high |
+| 10 | Open dashboard | read-only |
+| 11 | Rotate Stripe keys | high |
+
+Phase 1: ✅ complete (11/11 runbooks, all type-checked, all dry-run-tested).
 
 Friction patterns documented in
 `planning/houvox/KONVO-ADMIN-CLI.md` §4b — the CLI's job is to make
