@@ -36,6 +36,9 @@ import rotateStripeKeys from './runbooks/rotate-stripe-keys.ts';
 import openSuperuserPsql from './runbooks/open-superuser-psql.ts';
 import inspectDatabaseGucs from './runbooks/inspect-database-gucs.ts';
 import verifyWorkerEnv from './runbooks/verify-worker-env.ts';
+import diagnoseRolePermissions from './runbooks/diagnose-role-permissions.ts';
+import applyMigration from './runbooks/apply-migration.ts';
+import testWorkerDispatch from './runbooks/test-worker-dispatch.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -50,6 +53,9 @@ const RUNBOOKS: Runbook[] = [
   setPostgresGuc,
   inspectDatabaseGucs,
   verifyWorkerEnv,
+  testWorkerDispatch,
+  diagnoseRolePermissions,
+  applyMigration,
   openSuperuserPsql,
   openDashboard
 ];
