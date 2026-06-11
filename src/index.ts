@@ -29,6 +29,7 @@ import tailWorkerLogs from './runbooks/tail-worker-logs.ts';
 import smokeTest from './runbooks/smoke-test.ts';
 import restartService from './runbooks/restart-service.ts';
 import confirmStuckUser from './runbooks/confirm-stuck-user.ts';
+import bulkInsertCrowdfund from './runbooks/bulk-insert-crowdfund.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -36,6 +37,7 @@ const RUNBOOKS: Runbook[] = [
   confirmStuckUser,
   tailWorkerLogs,
   restartService,
+  bulkInsertCrowdfund,
   setPostgresGuc,
   openDashboard
 ];
