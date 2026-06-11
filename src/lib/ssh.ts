@@ -92,3 +92,28 @@ export async function psqlPiped(
 function shellQuote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
 }
+
+/**
+ * Stream a long-running remote command's stdout/stderr to the local
+ * terminal in real-time. Returns the spawned subprocess so the caller
+ * can:
+ *   - await `proc.exited` for completion
+ *   - call `proc.kill()` on SIGINT / cancel
+ *   - keep prompts UI alive while output flows below
+ *
+ * Use for `docker logs -f`, `journalctl -f`, `tail -f`, anything
+ * interactive. Output is NOT captured into a buffer — it goes
+ * directly to the inherited stdio so colors, carriage returns, and
+ * progress bars survive intact.
+ */
+export function streamExec(
+  cfg: Config,
+  command: string
+): import('bun').Subprocess<'ignore', 'inherit', 'inherit'> {
+  return Bun.spawn({
+    cmd: ['ssh', '-i', cfg.sshKey, '-t', cfg.prodHost, command],
+    stdin:  'ignore',
+    stdout: 'inherit',
+    stderr: 'inherit'
+  });
+}

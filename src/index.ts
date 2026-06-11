@@ -25,9 +25,11 @@ import type { Runbook, RunbookContext } from './runbooks/_interface.ts';
 import openDashboard from './runbooks/open-dashboard.ts';
 import setPostgresGuc from './runbooks/set-postgres-guc.ts';
 import inspectUser from './runbooks/inspect-user.ts';
+import tailWorkerLogs from './runbooks/tail-worker-logs.ts';
 
 const RUNBOOKS: Runbook[] = [
   inspectUser,
+  tailWorkerLogs,
   setPostgresGuc,
   openDashboard
 ];
