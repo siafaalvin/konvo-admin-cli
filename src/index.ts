@@ -40,11 +40,13 @@ import diagnoseRolePermissions from './runbooks/diagnose-role-permissions.ts';
 import applyMigration from './runbooks/apply-migration.ts';
 import testWorkerDispatch from './runbooks/test-worker-dispatch.ts';
 import syncStripeCatalog from './runbooks/sync-stripe-catalog.ts';
+import manageAdminGrants from './runbooks/manage-admin-grants.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
   inspectUser,
   confirmStuckUser,
+  manageAdminGrants,
   tailWorkerLogs,
   restartService,
   bulkInsertCrowdfund,
