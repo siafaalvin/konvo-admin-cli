@@ -1,0 +1,13 @@
+local_id,name,description,amount_cents,amount_display,currency,pricing_type,recurring_interval,recurring_interval_count,lookup_key,price_file,metadata_band,metadata_tier,metadata_extra
+standard-floor,Konvo Standard,Lifetime baseline membership with 1:1 code-based chat.,100,$1.00,usd,one_time,,,standard_floor_v2,standard-floor,standard,standard,
+standard-resident,Konvo Resident,Lifetime resident membership with location-verified messaging + neighborhood group chat.,1000,$10.00,usd,one_time,,,standard_resident_v2,standard-resident,standard,resident,
+standard-resident-plus,Konvo Resident+,"Lifetime premium membership with priority access, lower per-action point costs, and proximity contact.",2000,$20.00,usd,one_time,,,standard_resident_plus_v2,standard-resident-plus,standard,resident_plus,
+campaign-resident,Konvo Resident (Campaign),Launch-campaign discounted lifetime resident membership.,100,$1.00,usd,one_time,,,campaign_resident_v2,campaign-resident,campaign,resident,
+campaign-resident-plus,Konvo Resident+ (Campaign),Launch-campaign discounted lifetime premium membership.,200,$2.00,usd,one_time,,,campaign_resident_plus_v2,campaign-resident-plus,campaign,resident_plus,
+business-individual,Konvo Business — Individual,"Verified business badge for individual professionals (consultants, sole proprietors).",4500,$45.00,usd,recurring,year,1,business_individual_yearly_v2,business-individual,business,individual,
+business-nonprofit,Konvo Business — Educational / Non-profit,Verified business badge for educational institutions and non-profit organizations.,4500,$45.00,usd,recurring,year,1,business_nonprofit_yearly_v2,business-nonprofit,business,nonprofit,
+business-corporate,Konvo Business — Corporate,Verified business badge for corporate organizations.,45000,$450.00,usd,recurring,year,1,business_corporate_yearly_v2,business-corporate,business,corporate,
+business-government,Konvo Business — Government,Verified business badge for government agencies and federal contractors.,45000000,$450000.00,usd,recurring,year,1,business_government_yearly_v2,business-government,business,government,
+points-manual,Konvo Points — Manual Reload,8 Konvo points for $5 (manual reload).,500,$5.00,usd,one_time,,,points_manual_5_8_v2,points-manual,points,manual,points_granted=8
+points-auto,Konvo Points — Auto-reload,12 Konvo points for $5 (auto-reload bonus — requires saved payment method).,500,$5.00,usd,one_time,,,points_auto_5_12_v2,points-auto,points,auto,points_granted=12
+vouch-fee,Konvo Vouch Fee,Per-voucher fee for joining a vouch group ($5).,500,$5.00,usd,one_time,,,vouch_fee_v2,vouch-fee,vouch,fee,

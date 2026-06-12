@@ -96,3 +96,157 @@ export function formatAmount(amountCents: number, currency: string): string {
   const symbol = currency.toLowerCase() === 'usd' ? '$' : '';
   return `${symbol}${(amountCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
 }
+
+// ─── Catalog management primitives ──────────────────────────────────────
+// Used by the sync-stripe-catalog runbook. Find-or-create semantics so
+// the runbook is idempotent.
+
+/**
+ * Find a Product by metadata.konvo_id. Stripe's search API supports
+ * metadata queries on products; this lets us use stable kebab-case
+ * ids instead of Stripe's `prod_xxx` ids.
+ */
+export async function findProductByKonvoId(
+  cfg: Config,
+  konvoId: string
+): Promise<Stripe.Product | null> {
+  const stripe = requireStripe(cfg);
+  const search = await stripe.products.search({
+    query: `active:'true' AND metadata['konvo_id']:'${konvoId}'`,
+    limit: 1
+  });
+  return search.data[0] ?? null;
+}
+
+/**
+ * Create or update a Product. If a product exists with metadata.konvo_id
+ * matching, update its name/description/metadata. Otherwise create a new
+ * one.
+ *
+ * Returns the (possibly newly created) Product.
+ */
+export async function upsertProduct(
+  cfg: Config,
+  spec: {
+    konvoId:     string;
+    name:        string;
+    description: string;
+    metadata?:   Record<string, string>;
+  }
+): Promise<{ product: Stripe.Product; created: boolean }> {
+  const stripe = requireStripe(cfg);
+  const existing = await findProductByKonvoId(cfg, spec.konvoId);
+
+  const fullMetadata = { ...spec.metadata, konvo_id: spec.konvoId };
+
+  if (existing) {
+    const updated = await stripe.products.update(existing.id, {
+      name:        spec.name,
+      description: spec.description,
+      metadata:    fullMetadata
+    });
+    return { product: updated, created: false };
+  }
+
+  const created = await stripe.products.create({
+    name:        spec.name,
+    description: spec.description,
+    metadata:    fullMetadata
+  });
+  return { product: created, created: true };
+}
+
+/**
+ * Find an active Price for a product matching amount + currency +
+ * recurring spec. Returns null if no match.
+ */
+export async function findActivePrice(
+  cfg: Config,
+  productId:    string,
+  amountCents:  number,
+  currency:     string,
+  recurring?:   { interval: 'year' | 'month'; intervalCount: number }
+): Promise<Stripe.Price | null> {
+  const stripe = requireStripe(cfg);
+  const list = await stripe.prices.list({
+    product: productId,
+    active:  true,
+    limit:   100
+  });
+  return list.data.find((p) => {
+    if (p.unit_amount !== amountCents) return false;
+    if (p.currency !== currency)        return false;
+    if (recurring) {
+      if (!p.recurring) return false;
+      if (p.recurring.interval !== recurring.interval) return false;
+      if ((p.recurring.interval_count ?? 1) !== recurring.intervalCount) return false;
+    } else {
+      if (p.recurring) return false;
+    }
+    return true;
+  }) ?? null;
+}
+
+/**
+ * List all active Prices on a Product (regardless of amount). Used when
+ * we need to archive every old price after creating a new one with a
+ * different amount.
+ */
+export async function listActivePrices(
+  cfg: Config,
+  productId: string
+): Promise<Stripe.Price[]> {
+  const stripe = requireStripe(cfg);
+  const list = await stripe.prices.list({
+    product: productId,
+    active:  true,
+    limit:   100
+  });
+  return list.data;
+}
+
+/**
+ * Create a Price for a product, optionally with a lookup_key. If a
+ * price with the same lookup_key already exists on a different
+ * product/amount, transfers the lookup_key to the new price (idempotent
+ * "I want this lookup_key to point at this current price").
+ */
+export async function createPrice(
+  cfg: Config,
+  productId:    string,
+  amountCents:  number,
+  currency:     string,
+  recurring?:   { interval: 'year' | 'month'; intervalCount: number },
+  lookupKey?:   string
+): Promise<Stripe.Price> {
+  const stripe = requireStripe(cfg);
+  const params: Stripe.PriceCreateParams = {
+    product:       productId,
+    unit_amount:   amountCents,
+    currency
+  };
+  if (recurring) {
+    params.recurring = {
+      interval:       recurring.interval,
+      interval_count: recurring.intervalCount
+    };
+  }
+  if (lookupKey) {
+    params.lookup_key          = lookupKey;
+    params.transfer_lookup_key = true;
+  }
+  return stripe.prices.create(params);
+}
+
+/**
+ * Archive a Price (set active=false). Used after creating a new price
+ * to replace an old one — Stripe doesn't permit price-amount edits, so
+ * "change the price" actually means "create new + archive old".
+ */
+export async function archivePrice(
+  cfg: Config,
+  priceId: string
+): Promise<Stripe.Price> {
+  const stripe = requireStripe(cfg);
+  return stripe.prices.update(priceId, { active: false });
+}
