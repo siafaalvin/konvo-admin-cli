@@ -27,21 +27,6 @@ import { writeAudit } from '../lib/audit.ts';
 import { c } from '../lib/theme.ts';
 import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
 
-interface BuildingHold {
-  id:               string;
-  address_id:       string;
-  formatted:        string;
-  source:           'blocklist' | 'osm' | 'heuristic';
-  confidence:       'high' | 'medium' | 'low';
-  category:         string | null;
-  notes:            string | null;
-  created_by:       string | null;
-  created_at:       string;
-  dissolved_at:     string | null;
-  dissolved_by:     string | null;
-  dissolved_reason: string | null;
-}
-
 const SOURCE_OPTIONS = [
   { value: 'blocklist', label: 'Blocklist',  hint: 'Operator-curated — highest confidence, wins over all' },
   { value: 'osm',       label: 'OSM',        hint: 'Picked up via OSM POI tags by the layered lookup' },
