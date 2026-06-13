@@ -43,6 +43,7 @@ import syncStripeCatalog from './runbooks/sync-stripe-catalog.ts';
 import manageAdminGrants from './runbooks/manage-admin-grants.ts';
 import runSignupLoadTest from './runbooks/run-signup-load-test.ts';
 import toggleWaitlist from './runbooks/toggle-waitlist.ts';
+import issuePunitiveAction from './runbooks/issue-punitive-action.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -50,6 +51,7 @@ const RUNBOOKS: Runbook[] = [
   confirmStuckUser,
   manageAdminGrants,
   toggleWaitlist,
+  issuePunitiveAction,
   tailWorkerLogs,
   restartService,
   bulkInsertCrowdfund,
