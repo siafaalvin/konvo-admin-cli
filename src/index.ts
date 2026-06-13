@@ -44,12 +44,14 @@ import manageAdminGrants from './runbooks/manage-admin-grants.ts';
 import runSignupLoadTest from './runbooks/run-signup-load-test.ts';
 import toggleWaitlist from './runbooks/toggle-waitlist.ts';
 import issuePunitiveAction from './runbooks/issue-punitive-action.ts';
+import manageBuildingHolds from './runbooks/manage-building-holds.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
   inspectUser,
   confirmStuckUser,
   manageAdminGrants,
+  manageBuildingHolds,
   toggleWaitlist,
   issuePunitiveAction,
   tailWorkerLogs,
