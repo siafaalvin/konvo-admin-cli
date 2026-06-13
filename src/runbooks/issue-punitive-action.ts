@@ -65,7 +65,7 @@ const runbook: Runbook = {
   id:          'issue-punitive-action',
   title:       'Issue punitive action (fine / suspension)',
   description: 'Issues a fine or suspension to a user. Joint-risk cascade fires automatically for vouch group members. Audit-logged.',
-  risk:        'medium',
+  risk:        'high',
   requires:    ['ssh'],
 
   async run(ctx: RunbookContext): Promise<RunbookResult> {
@@ -122,7 +122,7 @@ select public.vouch_preview_cascade(
   }
 }
 
-function formatPreview(preview: PreviewResult, vouchee: string): string {
+function formatPreview(preview: PreviewResult): string {
   if (preview.group_count === 0) {
     return c.dim('User is not in any active vouch groups — no cascade.');
   }
@@ -199,7 +199,7 @@ async function issueFine(ctx: RunbookContext): Promise<RunbookResult> {
   const preview = await previewCascade(ctx, userId, 'fine', { fine_cents: amountCents });
   previewSp.stop('Done.');
   if (preview) {
-    prompt.note(formatPreview(preview, email), 'Cascade preview');
+    prompt.note(formatPreview(preview), 'Cascade preview');
   } else {
     prompt.note(c.yellow('Could not compute cascade preview — proceeding anyway.'), 'Warning');
   }
@@ -310,7 +310,7 @@ async function issueSuspension(ctx: RunbookContext): Promise<RunbookResult> {
   const preview = await previewCascade(ctx, userId, 'suspension', { duration: durationStr });
   previewSp.stop('Done.');
   if (preview) {
-    prompt.note(formatPreview(preview, email), 'Cascade preview');
+    prompt.note(formatPreview(preview), 'Cascade preview');
   }
 
   const confirmed = await prompt.confirm({
