@@ -41,6 +41,7 @@ import applyMigration from './runbooks/apply-migration.ts';
 import testWorkerDispatch from './runbooks/test-worker-dispatch.ts';
 import syncStripeCatalog from './runbooks/sync-stripe-catalog.ts';
 import manageAdminGrants from './runbooks/manage-admin-grants.ts';
+import runSignupLoadTest from './runbooks/run-signup-load-test.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -54,6 +55,7 @@ const RUNBOOKS: Runbook[] = [
   refundRevoke,
   rotateStripeKeys,
   syncStripeCatalog,
+  runSignupLoadTest,
   setPostgresGuc,
   inspectDatabaseGucs,
   verifyWorkerEnv,
