@@ -265,6 +265,48 @@ on conflict (email) do update set
   }
   sp.stop('Grant written.');
 
+  // Check whether the trigger applied the grant to an existing profile
+  // (migration 0046 wires admin_grants → profiles for already-signed-up
+  // accounts; signups for not-yet-existing emails are handled by
+  // handle_new_user at signup time).
+  const stateRes = await psqlPiped(ctx.config, `
+    select case when au.id is null then 'pending_signup' else 'applied_to_profile' end as state,
+           p.tier::text as profile_tier,
+           p.pricing_band::text as profile_band,
+           p.access_paid_at is not null as paywall_bypassed,
+           p.access_method::text as access_method
+      from public.admin_grants ag
+      left join auth.users au on lower(au.email) = lower(ag.email)
+      left join public.profiles p on p.id = au.id
+     where ag.email = '${sqlEsc(email)}';
+  `, 'supabase_admin');
+
+  let appliedToProfile = false;
+  if (stateRes.exitCode === 0 && stateRes.stdout) {
+    const line = stateRes.stdout.split('\n').find((l) => l.includes('applied_to_profile') || l.includes('pending_signup'));
+    appliedToProfile = !!line && line.includes('applied_to_profile');
+    if (line) {
+      const parts = line.split('|').map((s) => s.trim());
+      if (appliedToProfile) {
+        prompt.note(
+          [
+            `${c.green('✓')} Grant applied to existing profile`,
+            `Tier:           ${c.brand(parts[1] ?? '?')}`,
+            `Pricing band:   ${c.brand(parts[2] ?? '?')}`,
+            `Paywall:        ${parts[3] === 't' ? c.green('bypassed') : c.yellow('still active (!)')}`,
+            `Access method:  ${parts[4] ?? '?'}`
+          ].join('\n'),
+          'Profile state'
+        );
+      } else {
+        prompt.note(
+          c.dim(`User has not signed up yet. Grant will auto-apply at signup time via handle_new_user.`),
+          'Pending signup'
+        );
+      }
+    }
+  }
+
   const audit = await writeAudit(ctx.config, {
     runbookId: 'manage-admin-grants',
     action:    existing && !existing.redeemed_at ? 'grant-updated' : 'grant-created',
@@ -278,8 +320,8 @@ on conflict (email) do update set
 
   return {
     success: true,
-    summary: `Grant for ${email} ${existing && !existing.redeemed_at ? 'updated' : 'created'} (${tier as string}, ${band as string}, seed=${seed}).`,
-    details: { email, tier, band, seed }
+    summary: `Grant for ${email} ${existing && !existing.redeemed_at ? 'updated' : 'created'} (${tier as string}, ${band as string}, seed=${seed})${appliedToProfile ? ' — applied to profile, paywall bypassed' : ' — pending signup'}.`,
+    details: { email, tier, band, seed, appliedToProfile }
   };
 }
 
