@@ -47,6 +47,7 @@ import issuePunitiveAction from './runbooks/issue-punitive-action.ts';
 import manageBuildingHolds from './runbooks/manage-building-holds.ts';
 import setStripePriceId from './runbooks/set-stripe-price-id.ts';
 import redeployWorker from './runbooks/redeploy-worker.ts';
+import sitesAndDashboards from './runbooks/sites-and-dashboards.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -73,7 +74,8 @@ const RUNBOOKS: Runbook[] = [
   diagnoseRolePermissions,
   applyMigration,
   openSuperuserPsql,
-  openDashboard
+  openDashboard,
+  sitesAndDashboards
 ];
 
 async function main(): Promise<number> {
