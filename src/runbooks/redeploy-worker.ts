@@ -88,10 +88,31 @@ const runbook: Runbook = {
     const hash        = hashRes.stdout?.trim() ?? '?';
     const behindMain  = parseInt(behindRes.stdout?.trim() ?? '0', 10);
 
-    const warnings: string[] = [];
-    if (branch !== 'main') warnings.push(`Branch is ${c.yellow(branch)}, not main.`);
-    if (dirty)             warnings.push(`Working tree is ${c.yellow('dirty')} — uncommitted changes will be deployed.`);
-    if (behindMain > 0)    warnings.push(`Local is ${c.yellow(`${behindMain} commit(s) behind`)} origin/main — pull first?`);
+    // Pre-flight hygiene gates. Production deploys MUST come from a
+    // clean main checkout — dirty trees + non-main branches caused
+    // the 2026-06-15 incident where a chore-branch redeploy clobbered
+    // the freshly-merged §3.3 phase-A worker route. Previously these
+    // were warnings; now they're hard aborts. behindMain stays as a
+    // soft warning since deploying an older HEAD is sometimes a
+    // valid rollback.
+    const hardBlockers: string[] = [];
+    if (branch !== 'main') {
+      hardBlockers.push(
+        `${c.red('Branch is')} ${c.yellow(branch)}${c.red(', not main.')}`
+      );
+    }
+    if (dirty) {
+      hardBlockers.push(
+        `${c.red('Working tree is')} ${c.yellow('dirty')}${c.red(' — uncommitted changes would be deployed.')}`
+      );
+    }
+
+    const softWarnings: string[] = [];
+    if (behindMain > 0) {
+      softWarnings.push(
+        `Local is ${c.yellow(`${behindMain} commit(s) behind`)} origin/main — pull first if you want HEAD.`
+      );
+    }
 
     prompt.note(
       [
@@ -104,8 +125,34 @@ const runbook: Runbook = {
       'Deploy plan'
     );
 
-    if (warnings.length > 0) {
-      prompt.note(warnings.join('\n'), c.yellow('⚠ Pre-flight warnings'));
+    if (hardBlockers.length > 0) {
+      prompt.note(
+        [
+          ...hardBlockers,
+          '',
+          c.dim('Production deploys must run from a clean main checkout.'),
+          c.dim('Fix locally and re-run:'),
+          c.dim('  cd ' + config.pwaRepoPath),
+          c.dim('  git stash               # if you have WIP changes'),
+          c.dim('  git checkout main'),
+          c.dim('  git pull --ff-only'),
+          c.dim('  # then re-run this runbook')
+        ].join('\n'),
+        c.red('✘ Pre-flight failed — refusing to deploy')
+      );
+      return {
+        success: false,
+        summary: 'Pre-flight failed: ' + (
+          branch !== 'main' && dirty ? 'on non-main branch + dirty tree'
+          : branch !== 'main'        ? 'on non-main branch'
+          :                            'dirty working tree'
+        ),
+        details: { branch, dirty, hash, hardBlockers: hardBlockers.length }
+      };
+    }
+
+    if (softWarnings.length > 0) {
+      prompt.note(softWarnings.join('\n'), c.yellow('⚠ Pre-flight warnings'));
     }
 
     // ── 3. Confirm ──────────────────────────────────────────────
