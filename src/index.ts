@@ -45,6 +45,7 @@ import runSignupLoadTest from './runbooks/run-signup-load-test.ts';
 import toggleWaitlist from './runbooks/toggle-waitlist.ts';
 import issuePunitiveAction from './runbooks/issue-punitive-action.ts';
 import manageBuildingHolds from './runbooks/manage-building-holds.ts';
+import manageBannedTerms from './runbooks/manage-banned-terms.ts';
 import setStripePriceId from './runbooks/set-stripe-price-id.ts';
 import redeployWorker from './runbooks/redeploy-worker.ts';
 import sitesAndDashboards from './runbooks/sites-and-dashboards.ts';
@@ -55,6 +56,7 @@ const RUNBOOKS: Runbook[] = [
   confirmStuckUser,
   manageAdminGrants,
   manageBuildingHolds,
+  manageBannedTerms,
   toggleWaitlist,
   issuePunitiveAction,
   setStripePriceId,
