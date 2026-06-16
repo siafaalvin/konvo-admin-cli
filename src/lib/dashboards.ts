@@ -103,6 +103,30 @@ export const DASHBOARDS: Dashboard[] = [
     }
   },
   {
+    id: 'crowdfund',
+    name: 'Crowdfund platform — crowdfunding.thekonvo.com',
+    url: 'https://crowdfunding.thekonvo.com',
+    category: 'app',
+    notes: 'Backer pledge + campaign portal (Next.js). Successful Stripe checkouts flow into Konvo crowdfund_emails via /v1/crowdfund/upsert worker route → backers get pricing_band=campaign on Konvo signup.',
+    auth: {
+      method: 'username/pass',
+      description: 'Supabase Auth (separate Supabase project from Konvo). Admin dashboard at /admin gates on profiles.is_admin column.',
+      credentialsLocation: 'Operator personal vault. First admin set via SQL: update profiles set is_admin=true where id=...'
+    }
+  },
+  {
+    id: 'crowdfund-supabase',
+    name: 'Crowdfund Supabase — ahfipxppbnneadwxbfvq',
+    url: 'https://supabase.com/dashboard/project/ahfipxppbnneadwxbfvq',
+    category: 'infra',
+    notes: 'SEPARATE Supabase project from Konvo. Runs the crowdfund-platform DB (8 tables: profiles, projects, contributions, reward_tiers, beta_access, blog_posts, timeline_events, beta_signups).',
+    auth: {
+      method: 'mfa-portal',
+      description: 'Supabase account login. Same account as the Konvo project; access controlled per-project.',
+      credentialsLocation: 'Operator personal vault. Service-role key used by the platform is in /Applications/Projects/crowdfund-platform/.env.local (and Coolify prod env).'
+    }
+  },
+  {
     id: 'api',
     name: 'Supabase API — api.thekonvo.com',
     url: 'https://api.thekonvo.com',
