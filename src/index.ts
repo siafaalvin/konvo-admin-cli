@@ -50,12 +50,14 @@ import reviewFlaggedPlateMessages from './runbooks/review-flagged-plate-messages
 import setStripePriceId from './runbooks/set-stripe-price-id.ts';
 import redeployWorker from './runbooks/redeploy-worker.ts';
 import sitesAndDashboards from './runbooks/sites-and-dashboards.ts';
+import resetUserPassword from './runbooks/reset-user-password.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
   inspectUser,
   confirmStuckUser,
   manageAdminGrants,
+  resetUserPassword,
   manageBuildingHolds,
   manageBannedTerms,
   reviewFlaggedPlateMessages,
