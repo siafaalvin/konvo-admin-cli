@@ -51,6 +51,7 @@ import setStripePriceId from './runbooks/set-stripe-price-id.ts';
 import redeployWorker from './runbooks/redeploy-worker.ts';
 import sitesAndDashboards from './runbooks/sites-and-dashboards.ts';
 import resetUserPassword from './runbooks/reset-user-password.ts';
+import snapshotSupabaseBackup from './runbooks/snapshot-supabase-backup.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -65,6 +66,7 @@ const RUNBOOKS: Runbook[] = [
   issuePunitiveAction,
   setStripePriceId,
   redeployWorker,
+  snapshotSupabaseBackup,
   tailWorkerLogs,
   restartService,
   bulkInsertCrowdfund,
