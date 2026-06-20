@@ -134,7 +134,7 @@ const runbook: Runbook = {
     const audit = await writeAudit(ctx.config, {
       runbookId: 'snapshot-supabase-backup',
       action:    'snapshot-triggered',
-      target:    null as unknown as string,
+      target:    `supabase/${new Date().toISOString().slice(0, 10)}`,
       metadata:  {
         scriptPath: SCRIPT_PATH,
         exitCode:   res.exitCode,
