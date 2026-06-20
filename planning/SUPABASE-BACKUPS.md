@@ -90,15 +90,32 @@ ssh root@5.78.237.171 \
 If you just need to recover one table after an accidental DELETE:
 
 ```bash
-# 1. Spin up a temp Postgres container locally with the dump loaded
+# 1. Start a temp Postgres container in DETACHED mode so it persists
+#    for subsequent docker exec calls.
+CID=$(docker run -d -e POSTGRES_PASSWORD=temp postgres:16)
+
+# 2. Wait for Postgres to accept connections (image takes a few seconds
+#    to bootstrap the data dir on first start).
+until docker exec "$CID" pg_isready -U postgres -q; do sleep 1; done
+
+# 3. Pipe the dump into psql inside the container.
 zcat crowdfund-supabase-<ts>.sql.gz | \
-  docker run --rm -i -e POSTGRES_PASSWORD=temp postgres:16 \
-    bash -c "service postgresql start; psql -U postgres -d postgres"
+  docker exec -i "$CID" psql -U postgres -d postgres -v ON_ERROR_STOP=1
 
-# 2. From the temp DB, dump just the table you need
-docker exec <temp-container> pg_dump -t public.contributions ... > contributions.sql
+# 4. Dump just the table you need (data only, no schema — assumes the
+#    target table already exists in prod).
+docker exec "$CID" pg_dump -U postgres -d postgres \
+  --data-only --table=public.contributions \
+  > contributions.sql
 
-# 3. Apply that to prod
+# 5. Apply contributions.sql to prod (review first!).
+cat contributions.sql | \
+  ssh root@5.78.237.171 \
+    "docker exec -i \$(docker ps --format '{{.Names}}' | grep '^supabase-db-d12fsi') \
+       psql -U postgres -d postgres -v ON_ERROR_STOP=1"
+
+# 6. Clean up the temp container.
+docker rm -f "$CID"
 ```
 
 In practice: easier to just `zcat | grep -A 100 'COPY public.contributions'` to extract the rows, then INSERT them manually. Document-by-document recovery is rare; usually the question is "how do I get back to <yesterday's state>" which means full restore.
