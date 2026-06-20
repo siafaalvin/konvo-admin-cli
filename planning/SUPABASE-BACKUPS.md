@@ -176,7 +176,7 @@ ssh -i ~/.ssh/id_ed25519 root@5.78.237.171 /root/backups/run-supabase-backup.sh
 ```
 
 Or via konvo-admin-cli:
-```
+```text
 bun start → Snapshot Supabase backups
 ```
 (See: `src/runbooks/snapshot-supabase-backup.ts`.)
