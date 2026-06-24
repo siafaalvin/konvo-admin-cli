@@ -52,7 +52,7 @@ export async function psqlOneShot(
   // right Postgres container even if Coolify regenerates the suffix.
   // The pager-off flag prevents the pager-not-found errors we hit
   // earlier in OPS-URLS § Phase D walkthrough.
-  const inner = `docker exec -i $(docker ps --format '{{.Names}}' | grep -E '^supabase-db-') psql -U ${user} -d postgres -P pager=off -c ${shellQuote(sql)}`;
+  const inner = `docker exec -i supabase-db-hoc46cx1c1qd643gkaqxhezq psql -U ${user} -d postgres -P pager=off -c ${shellQuote(sql)}`;
   return exec(cfg, inner);
 }
 
@@ -66,7 +66,7 @@ export async function psqlPiped(
   sql: string,
   user: 'supabase_admin' | 'postgres' = 'supabase_admin'
 ): Promise<ExecResult> {
-  const remoteCmd = `docker exec -i $(docker ps --format '{{.Names}}' | grep -E '^supabase-db-') psql -U ${user} -d postgres -P pager=off -v ON_ERROR_STOP=1`;
+  const remoteCmd = `docker exec -i supabase-db-hoc46cx1c1qd643gkaqxhezq psql -U ${user} -d postgres -P pager=off -v ON_ERROR_STOP=1`;
   const proc = Bun.spawn({
     cmd: ['ssh', '-i', cfg.sshKey, cfg.prodHost, remoteCmd],
     stdin: 'pipe',
