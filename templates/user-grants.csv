@@ -1,6 +1,6 @@
-email,tier,pricing_band,seed_geofence_passes,notes
-alice@example.com,resident_plus,campaign,3,VIP early backer - full bypass
-bob@example.com,resident,campaign,0,Standard game registration
-carol@example.com,resident,campaign,0,
-dave@example.com,resident_plus,campaign,2,Partner - reduced verification
-eve@example.com,standard,standard,0,Standard tier - annual billing
+email,name,tier,pricing_band,seed_geofence_passes,notes
+alice@example.com,Alice Johnson,resident_plus,campaign,3,VIP early backer - full bypass
+bob@example.com,Bob Smith,resident,campaign,0,Standard game registration
+carol@example.com,Carol,,campaign,0,
+dave@example.com,Dave Williams,resident_plus,campaign,2,Partner - reduced verification
+eve@example.com,Eve Chen,standard,standard,0,Standard tier - annual billing

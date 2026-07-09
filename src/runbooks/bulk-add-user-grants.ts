@@ -38,6 +38,7 @@ const VALID_BANDS = new Set(['campaign', 'standard']);
 
 interface GrantRow {
   email: string;
+  name: string;
   tier: string;
   pricing_band: string;
   seed_geofence_passes: number;
@@ -76,28 +77,30 @@ async function parseCsv(filePath: string): Promise<ParseResult> {
     if (seen.has(email)) continue; // dedup silently
     seen.add(email);
 
-    const tier = (cols[1] ?? '').toLowerCase() || 'resident';
+    const name = (cols[1] ?? '').trim();
+
+    const tier = (cols[2] ?? '').toLowerCase() || 'resident';
     if (!VALID_TIERS.has(tier)) {
       invalid.push({ line: lineNum, reason: `invalid tier '${tier}' (use: standard, resident, resident_plus)`, raw: line });
       continue;
     }
 
-    const band = (cols[2] ?? '').toLowerCase() || 'campaign';
+    const band = (cols[3] ?? '').toLowerCase() || 'campaign';
     if (!VALID_BANDS.has(band)) {
       invalid.push({ line: lineNum, reason: `invalid pricing_band '${band}' (use: campaign, standard)`, raw: line });
       continue;
     }
 
-    const seedStr = cols[3] ?? '0';
+    const seedStr = cols[4] ?? '0';
     const seed = parseInt(seedStr, 10);
     if (isNaN(seed) || seed < 0 || seed > 3) {
       invalid.push({ line: lineNum, reason: `invalid seed_geofence_passes '${seedStr}' (use 0-3)`, raw: line });
       continue;
     }
 
-    const notes = cols[4] ?? '';
+    const notes = cols[5] ?? '';
 
-    grants.push({ email, tier, pricing_band: band, seed_geofence_passes: seed, notes });
+    grants.push({ email, name, tier, pricing_band: band, seed_geofence_passes: seed, notes });
   }
 
   return {
@@ -113,7 +116,7 @@ function buildInsertSql(grants: GrantRow[], grantedBy: string): string {
   const values = grants
     .map(
       (g) =>
-        `('${esc(g.email)}', '${esc(g.tier)}', '${esc(g.pricing_band)}', ${g.seed_geofence_passes}, '${esc(grantedBy)}', ${g.notes ? `'${esc(g.notes)}'` : 'NULL'})`
+        `('${esc(g.email)}', ${g.name ? `'${esc(g.name)}'` : 'NULL'}, '${esc(g.tier)}', '${esc(g.pricing_band)}', ${g.seed_geofence_passes}, '${esc(grantedBy)}', ${g.notes ? `'${esc(g.notes)}'` : 'NULL'})`
     )
     .join(',\n  ');
 
@@ -123,11 +126,12 @@ function buildInsertSql(grants: GrantRow[], grantedBy: string): string {
     `\\pset tuples_only on`,
     ``,
     `with ins as (`,
-    `  insert into public.admin_grants (email, tier_grant, pricing_band_grant, seed_geofence_passes, granted_by, notes)`,
+    `  insert into public.admin_grants (email, name, tier_grant, pricing_band_grant, seed_geofence_passes, granted_by, notes)`,
     `  values`,
     `  ${values}`,
     `  on conflict (lower(email)) do update set`,
-    `    tier_grant           = excluded.tier_grant,`,
+    `    name                 = COALESCE(excluded.name, admin_grants.name),
+    tier_grant           = excluded.tier_grant,`,
     `    pricing_band_grant   = excluded.pricing_band_grant,`,
     `    seed_geofence_passes = excluded.seed_geofence_passes,`,
     `    granted_by           = excluded.granted_by,`,
@@ -226,7 +230,7 @@ const runbook: Runbook = {
         `  standard:       ${tierCounts.standard}`,
         ``,
         c.dim('Sample (first 5):'),
-        ...parsed.sample.map((g) => c.dim(`  · ${g.email} → ${g.tier} (${g.pricing_band}, seed=${g.seed_geofence_passes})${g.notes ? ` [${g.notes}]` : ''}`)),
+        ...parsed.sample.map((g) => c.dim(`  · ${g.email}${g.name ? ` (${g.name})` : ''} → ${g.tier} (${g.pricing_band}, seed=${g.seed_geofence_passes})${g.notes ? ` [${g.notes}]` : ''}`)),
         parsed.invalid.length > 0
           ? '\n' + c.yellow('Invalid lines (first 3):') + '\n' + parsed.invalid.slice(0, 3).map((e) => `  L${e.line}: ${e.reason} → "${e.raw}"`).join('\n')
           : '',
