@@ -52,12 +52,14 @@ import redeployWorker from './runbooks/redeploy-worker.ts';
 import sitesAndDashboards from './runbooks/sites-and-dashboards.ts';
 import resetUserPassword from './runbooks/reset-user-password.ts';
 import snapshotSupabaseBackup from './runbooks/snapshot-supabase-backup.ts';
+import bulkAddUserGrants from './runbooks/bulk-add-user-grants.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
   inspectUser,
   confirmStuckUser,
   manageAdminGrants,
+  bulkAddUserGrants,
   resetUserPassword,
   manageBuildingHolds,
   manageBannedTerms,
