@@ -54,6 +54,7 @@ import resetUserPassword from './runbooks/reset-user-password.ts';
 import snapshotSupabaseBackup from './runbooks/snapshot-supabase-backup.ts';
 import deployCoolifyApp from './runbooks/deploy-coolify-app.ts';
 import bulkAddUserGrants from './runbooks/bulk-add-user-grants.ts';
+import bulkSendReceipts from './runbooks/bulk-send-receipts.ts';
 
 const RUNBOOKS: Runbook[] = [
   smokeTest,
@@ -61,6 +62,7 @@ const RUNBOOKS: Runbook[] = [
   confirmStuckUser,
   manageAdminGrants,
   bulkAddUserGrants,
+  bulkSendReceipts,
   resetUserPassword,
   manageBuildingHolds,
   manageBannedTerms,

@@ -265,11 +265,34 @@ on conflict (email) do update set
   }
   sp.stop('Grant written.');
 
-  // Check whether the trigger applied the grant to an existing profile
-  // (migration 0046 wires admin_grants → profiles for already-signed-up
-  // accounts; signups for not-yet-existing emails are handled by
-  // handle_new_user at signup time).
+  // Explicitly mark the profile as paid if the user already exists.
+  // The DB trigger (migration 0046) should do this, but we do it
+  // directly here as well to guarantee paywall bypass regardless of
+  // trigger state on prod. This is idempotent — coalesce preserves
+  // any existing access_paid_at timestamp.
+  const applySql = `
+    update public.profiles
+       set tier           = '${sqlEsc(tier as string)}',
+           pricing_band   = '${sqlEsc(band as string)}',
+           access_paid_at = coalesce(access_paid_at, now()),
+           access_method  = 'admin'
+     where id = (
+       select au.id from auth.users au
+        where lower(au.email) = lower('${sqlEsc(email)}')
+        limit 1
+     );
+  `;
+  const applyRes = await psqlPiped(ctx.config, applySql, 'supabase_admin');
+  if (applyRes.exitCode !== 0) {
+    prompt.note(c.yellow(`Profile update failed (grant was written): ${applyRes.stderr.trim().slice(0, 120)}`), 'Warning');
+  }
+
+  // Check the final profile state after the explicit update.
   const stateRes = await psqlPiped(ctx.config, `
+\\set QUIET on
+\\pset format unaligned
+\\pset tuples_only on
+
     select case when au.id is null then 'pending_signup' else 'applied_to_profile' end as state,
            p.tier::text as profile_tier,
            p.pricing_band::text as profile_band,

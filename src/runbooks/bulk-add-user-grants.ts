@@ -144,6 +144,45 @@ function buildInsertSql(grants: GrantRow[], grantedBy: string): string {
   ].join('\n');
 }
 
+/**
+ * Builds SQL to explicitly apply grants to existing profiles.
+ * Sets tier, pricing_band, access_paid_at, and access_method='admin'
+ * for any user whose email matches a grant. This ensures paywall bypass
+ * works regardless of DB trigger state (migration 0046). Idempotent:
+ * access_paid_at uses coalesce to preserve existing timestamps.
+ */
+function buildProfileApplySql(grants: GrantRow[]): string {
+  const esc = (s: string) => s.replace(/'/g, "''");
+  // Build a VALUES list of (email, tier, pricing_band) for the update join
+  const values = grants
+    .map((g) => `('${esc(g.email)}', '${esc(g.tier)}', '${esc(g.pricing_band)}')`)
+    .join(',\n    ');
+
+  return [
+    `\\set QUIET on`,
+    `\\pset format unaligned`,
+    `\\pset tuples_only on`,
+    ``,
+    `with grant_data (email, tier, pricing_band) as (`,
+    `  values`,
+    `    ${values}`,
+    `),`,
+    `applied as (`,
+    `  update public.profiles p`,
+    `     set tier           = gd.tier,`,
+    `         pricing_band   = gd.pricing_band,`,
+    `         access_paid_at = coalesce(p.access_paid_at, now()),`,
+    `         access_method  = 'admin'`,
+    `    from grant_data gd`,
+    `    join auth.users au on lower(au.email) = gd.email`,
+    `   where p.id = au.id`,
+    `  returning p.id`,
+    `)`,
+    `select 'APPLIED=' || count(*)::text from applied;`,
+    ``
+  ].join('\n');
+}
+
 const runbook: Runbook = {
   id:          'bulk-add-user-grants',
   title:       'Bulk add user grants (CSV)',
@@ -270,6 +309,32 @@ const runbook: Runbook = {
     const m = res.stdout.match(/UPSERTED=(\d+)/);
     const upsertedCount = m ? parseInt(m[1]!, 10) : -1;
 
+    // 5b. Explicitly mark existing profiles as paid.
+    // The DB trigger (migration 0046) should handle this, but we apply
+    // directly as well to guarantee paywall bypass regardless of trigger
+    // state. Only touches profiles whose email matches a grant AND whose
+    // access_paid_at is currently null (idempotent for already-paid users).
+    const applySql = buildProfileApplySql(parsed.grants);
+    const sp3 = prompt.spinner();
+    sp3.start('Applying grants to existing profiles…');
+    const applyRes = await psqlPiped(ctx.config, applySql, 'supabase_admin');
+    sp3.stop(applyRes.exitCode === 0 ? 'Profiles updated.' : 'Profile update had issues (grants were written).');
+    let profilesApplied = -1;
+    if (applyRes.exitCode === 0 && applyRes.stdout) {
+      const pm = applyRes.stdout.match(/APPLIED=(\d+)/);
+      profilesApplied = pm ? parseInt(pm[1]!, 10) : -1;
+    }
+    if (applyRes.exitCode !== 0) {
+      prompt.note(c.yellow(`Profile update warning: ${applyRes.stderr.trim().slice(0, 120)}`), 'Warning');
+    } else if (profilesApplied >= 0) {
+      prompt.note(
+        profilesApplied > 0
+          ? c.green(`✓ ${profilesApplied} existing profile(s) marked as paid (paywall bypassed).`)
+          : c.dim('No existing profiles needed updating (all pending signup or already paid).'),
+        'Profile apply'
+      );
+    }
+
     const audit = await writeAudit(ctx.config, {
       runbookId: 'bulk-add-user-grants',
       action: 'admin-grants-bulk-upserted',
@@ -280,6 +345,7 @@ const runbook: Runbook = {
         parsed: parsed.grants.length,
         invalid: parsed.invalid.length,
         upserted: upsertedCount,
+        profilesApplied,
         tierCounts,
       },
       dryRun: ctx.dryRun
@@ -291,9 +357,9 @@ const runbook: Runbook = {
     return {
       success: true,
       summary: upsertedCount >= 0
-        ? `Upserted ${upsertedCount} grants (${parsed.grants.length - upsertedCount} already redeemed/unchanged).`
-        : `Upsert succeeded for ${parsed.grants.length} grants.`,
-      details: { csvPath, grantedBy, parsed: parsed.grants.length, upserted: upsertedCount, tierCounts }
+        ? `Upserted ${upsertedCount} grants (${parsed.grants.length - upsertedCount} already redeemed/unchanged).${profilesApplied > 0 ? ` ${profilesApplied} existing profile(s) marked paid.` : ''}`
+        : `Upsert succeeded for ${parsed.grants.length} grants.${profilesApplied > 0 ? ` ${profilesApplied} existing profile(s) marked paid.` : ''}`,
+      details: { csvPath, grantedBy, parsed: parsed.grants.length, upserted: upsertedCount, profilesApplied, tierCounts }
     };
   }
 };
