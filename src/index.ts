@@ -66,10 +66,12 @@ import markUserPaid from './runbooks/mark-user-paid.ts';
 import viewRecentPosts from './runbooks/view-recent-posts.ts';
 import resetVerificationZone from './runbooks/reset-verification-zone.ts';
 import viewAlerts from './runbooks/view-alerts.ts';
+import reviewBotReplies from './runbooks/review-bot-replies.ts';
 
 const RUNBOOKS: Runbook[] = [
   checkSystemHealth,
   viewAlerts,
+  reviewBotReplies,
   smokeTest,
   viewRecentPosts,
   inspectUser,
