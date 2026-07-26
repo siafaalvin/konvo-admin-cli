@@ -52,6 +52,10 @@ const runbook: Runbook = {
     // 2. Look up user and current payment status
     const sqlEsc = email.replace(/'/g, `''`);
     const lookupSql = `
+INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+SELECT 'konvo-admin-cli:mark-user-paid', 'email_lookup', au.id, 'mark user paid'
+FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
+
 \\set QUIET on
 \\pset format unaligned
 \\pset tuples_only on

@@ -45,18 +45,22 @@ const runbook: Runbook = {
 
     // 2. Look up the post
     const lookupSql = `
+INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+SELECT 'konvo-admin-cli:delete-post', 'email_lookup', posts.author_id, 'delete post'
+FROM posts WHERE posts.id = '${postId}';
+
 \\set QUIET on
 \\pset format unaligned
 \\pset tuples_only on
 SELECT
   p.content || '|||' ||
   coalesce(u.username, 'unknown') || '|||' ||
-  coalesce(au.email, 'unknown') || '|||' ||
+  coalesce(pr.platform_id, 'unknown') || '|||' ||
   to_char(p.created_at, 'YYYY-MM-DD HH24:MI') || '|||' ||
   coalesce(p.deleted_at::text, 'not_deleted')
 FROM posts p
 LEFT JOIN user_usernames u ON u.id = p.posted_as_username_id
-LEFT JOIN auth.users au ON au.id = p.author_id
+LEFT JOIN profiles pr ON pr.id = p.author_id
 WHERE p.id = '${postId}';
 `;
 
@@ -75,7 +79,7 @@ WHERE p.id = '${postId}';
       return { success: false, summary: `Post ${postId} not found.` };
     }
 
-    const [content, username, authorEmail, createdAt, deletedAt] = row.split('|||');
+    const [content, username, authorPlatformId, createdAt, deletedAt] = row.split('|||');
 
     if (deletedAt !== 'not_deleted') {
       prompt.note(`This post was already deleted on ${deletedAt}.`, 'Already deleted');
@@ -85,7 +89,7 @@ WHERE p.id = '${postId}';
     // 3. Show the post and confirm
     const preview = [
       `Post ID:  ${c.dim(postId)}`,
-      `Author:   @${username} (${authorEmail})`,
+      `Author:   @${username} (${authorPlatformId})`,
       `Posted:   ${createdAt}`,
       '',
       `Content:`,
@@ -109,7 +113,7 @@ WHERE p.id = '${postId}';
       return {
         success: true,
         summary: `Dry-run: would soft-delete post ${postId} by @${username}.`,
-        details: { postId, username, authorEmail, dryRun: true }
+        details: { postId, username, authorPlatformId, dryRun: true }
       };
     }
 
@@ -129,14 +133,14 @@ WHERE p.id = '${postId}';
       runbookId: 'delete-post',
       action:    'soft-delete',
       target:    postId,
-      metadata:  { postId, username, authorEmail, contentSnippet: (content ?? '').slice(0, 100) },
+      metadata:  { postId, username, authorPlatformId, contentSnippet: (content ?? '').slice(0, 100) },
       dryRun:    ctx.dryRun
     });
 
     return {
       success: true,
       summary: `Post by @${username} deleted. It's gone from feeds now.`,
-      details: { postId, username, authorEmail }
+      details: { postId, username, authorPlatformId }
     };
   }
 };

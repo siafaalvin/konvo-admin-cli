@@ -44,6 +44,10 @@ const runbook: Runbook = {
     // 2. Look up user and current zone info
     const sqlEsc = email.replace(/'/g, `''`);
     const lookupSql = `
+INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+SELECT 'konvo-admin-cli:reset-verification-zone', 'email_lookup', au.id, 'reset verification zone'
+FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
+
 \\set QUIET on
 \\pset format unaligned
 \\pset tuples_only on

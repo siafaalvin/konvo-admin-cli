@@ -45,6 +45,10 @@ const runbook: Runbook = {
     // 2. Look up user and their pending residencies
     const sqlEsc = email.replace(/'/g, `''`);
     const lookupSql = `
+INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+SELECT 'konvo-admin-cli:verify-address-manually', 'email_lookup', au.id, 'manual address verification'
+FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
+
 \\set QUIET on
 \\pset format unaligned
 \\pset tuples_only on
