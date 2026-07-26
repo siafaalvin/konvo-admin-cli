@@ -55,10 +55,29 @@ import snapshotSupabaseBackup from './runbooks/snapshot-supabase-backup.ts';
 import deployCoolifyApp from './runbooks/deploy-coolify-app.ts';
 import bulkAddUserGrants from './runbooks/bulk-add-user-grants.ts';
 import bulkSendReceipts from './runbooks/bulk-send-receipts.ts';
+import devServers from './runbooks/dev-servers.ts';
+import changeUserTier from './runbooks/change-user-tier.ts';
+import suspendUser from './runbooks/suspend-user.ts';
+import deletePost from './runbooks/delete-post.ts';
+import createSystemPost from './runbooks/create-system-post.ts';
+import verifyAddressManually from './runbooks/verify-address-manually.ts';
+import checkSystemHealth from './runbooks/check-system-health.ts';
+import markUserPaid from './runbooks/mark-user-paid.ts';
+import viewRecentPosts from './runbooks/view-recent-posts.ts';
+import resetVerificationZone from './runbooks/reset-verification-zone.ts';
 
 const RUNBOOKS: Runbook[] = [
+  checkSystemHealth,
   smokeTest,
+  viewRecentPosts,
   inspectUser,
+  changeUserTier,
+  suspendUser,
+  markUserPaid,
+  verifyAddressManually,
+  resetVerificationZone,
+  deletePost,
+  createSystemPost,
   confirmStuckUser,
   manageAdminGrants,
   bulkAddUserGrants,
@@ -89,7 +108,8 @@ const RUNBOOKS: Runbook[] = [
   applyMigration,
   openSuperuserPsql,
   openDashboard,
-  sitesAndDashboards
+  sitesAndDashboards,
+  devServers
 ];
 
 async function main(): Promise<number> {
