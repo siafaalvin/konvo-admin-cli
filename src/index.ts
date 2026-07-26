@@ -65,9 +65,11 @@ import checkSystemHealth from './runbooks/check-system-health.ts';
 import markUserPaid from './runbooks/mark-user-paid.ts';
 import viewRecentPosts from './runbooks/view-recent-posts.ts';
 import resetVerificationZone from './runbooks/reset-verification-zone.ts';
+import viewAlerts from './runbooks/view-alerts.ts';
 
 const RUNBOOKS: Runbook[] = [
   checkSystemHealth,
+  viewAlerts,
   smokeTest,
   viewRecentPosts,
   inspectUser,
