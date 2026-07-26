@@ -50,11 +50,11 @@ const runbook: Runbook = {
 SELECT
   to_char(p.created_at, 'MM/DD HH24:MI') as posted,
   coalesce(u.username, 'unknown') as author,
-  coalesce(au.email, 'unknown') as email,
+  coalesce(prof.platform_id, 'unknown') as platform_id,
   left(p.content, 120) as content
 FROM posts p
 LEFT JOIN user_usernames u ON u.id = p.posted_as_username_id
-LEFT JOIN auth.users au ON au.id = p.author_id
+LEFT JOIN profiles prof ON prof.id = p.author_id
 WHERE p.deleted_at IS NULL
 ORDER BY p.created_at DESC
 LIMIT ${count};
@@ -78,9 +78,9 @@ LIMIT ${count};
 
     // 3. Format and display
     const formatted = rows.map((row, i) => {
-      const [posted, author, email, content] = row.split('|||');
+      const [posted, author, platformId, content] = row.split('|||');
       return [
-        `${c.dim(`#${i + 1}`)} ${c.brand(`@${author}`)} ${c.dim(`(${email})`)}`,
+        `${c.dim(`#${i + 1}`)} ${c.brand(`@${author}`)} ${c.dim(`(${platformId})`)}`,
         `   ${c.dim(posted ?? '')}`,
         `   ${(content ?? '').trim()}`,
         ''
