@@ -1,15 +1,18 @@
 /**
  * Runbook #3 — Inspect user.
  *
- * Read-only. Prompts for an email address, runs a multi-table join
- * against prod, and renders the user's full state (auth, profile,
- * residency, geofence-v2 progress, push subscriptions, recent
- * documents). First answer to almost every support ticket:
- *   "I paid but can't get in."
- *   "My location checks aren't passing."
- *   "I'm not receiving notifications."
+ * Read-only. Prompts for a platform_id OR email, runs queries against
+ * PSEUDONYMIZED admin views by default. Real PII (email, address) is
+ * only revealed via elevated access which logs the reason to the audit trail.
  *
- * No mutations, no confirmation prompt.
+ * Default view shows:
+ *   - platform_id, masked email, masked name, tier, payment status
+ *   - Residency zone (e.g. "Zone OR-97003-5D"), status, pass count
+ *   - Geofence checks (distance/accuracy, no coordinates)
+ *   - Push subscriptions
+ *
+ * Elevated access (optional): reveals real email + full address after
+ * you provide a reason (logged to admin_audit_log).
  */
 
 import { psqlPiped } from '../lib/ssh.ts';
@@ -18,149 +21,181 @@ import type { Runbook, RunbookContext, RunbookResult } from './_interface.ts';
 const runbook: Runbook = {
   id:          'inspect-user',
   title:       'Inspect user',
-  description: 'Show profile, residency, geofence-v2 progress, push subs, and recent docs for a user (by email).',
+  description: 'Look up a user by platform ID or email. Shows pseudonymized data by default — real PII requires a reason.',
   risk:        'read-only',
   requires:    ['ssh'],
 
   async run(ctx: RunbookContext): Promise<RunbookResult> {
     const { prompt } = ctx;
 
-    // Prompt for email.
-    const emailIn = await prompt.text({
-      message: 'User email',
-      placeholder: 'user@example.com',
-      validate: (v) => {
-        const s = (v ?? '').trim();
-        if (!s) return 'Required.';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return 'Not a valid email shape.';
-        return undefined;
-      }
+    const lookupMethod = await prompt.select({
+      message: 'How do you want to find this user?',
+      options: [
+        { value: 'platform_id', label: 'By platform ID (e.g. hvx_X83AVCXF)' },
+        { value: 'email',       label: 'By email address (requires elevated access)' },
+      ],
     });
-    if (prompt.isCancel(emailIn)) {
-      prompt.cancel('Cancelled.');
-      return { success: false, summary: 'Operator cancelled.' };
-    }
-    const email = (emailIn as string).trim().toLowerCase();
+    if (prompt.isCancel(lookupMethod)) return { success: false, summary: 'Cancelled.' };
 
-    // Single SQL block, multiple result sets. We use `\echo` separators
-    // so we can split the stdout cleanly into named sections without
-    // building a full structured driver.
-    const sqlEsc = email.replace(/'/g, `''`);
+    let userId: string | null = null;
+    let lookupDisplay = '';
+
+    if (lookupMethod === 'platform_id') {
+      const pidIn = await prompt.text({
+        message: 'Platform ID',
+        placeholder: 'hvx_XXXXXXXX',
+        validate: (v) => {
+          const s = (v ?? '').trim();
+          if (!s) return 'Required.';
+          if (!/^(hvx_|kvx_)[a-zA-Z0-9]+$/.test(s)) return 'Should start with hvx_ or kvx_';
+          return undefined;
+        }
+      });
+      if (prompt.isCancel(pidIn)) return { success: false, summary: 'Cancelled.' };
+      const pid = (pidIn as string).trim();
+      lookupDisplay = pid;
+
+      // Look up user_id from platform_id
+      const lookup = await psqlPiped(ctx.config,
+        `SELECT id::text FROM profiles WHERE platform_id = '${pid.replace(/'/g, "''")}' LIMIT 1;`,
+        'supabase_admin');
+      const match = lookup.stdout.match(/([0-9a-f-]{36})/);
+      if (!match) {
+        prompt.note(`No user found with platform ID: ${pid}`, 'Not found');
+        return { success: true, summary: `User ${pid} not found.` };
+      }
+      userId = match[1];
+
+    } else {
+      // Email lookup requires elevated access — log reason
+      const emailIn = await prompt.text({
+        message: 'User email',
+        placeholder: 'user@example.com',
+        validate: (v) => {
+          const s = (v ?? '').trim();
+          if (!s) return 'Required.';
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return 'Not a valid email.';
+          return undefined;
+        }
+      });
+      if (prompt.isCancel(emailIn)) return { success: false, summary: 'Cancelled.' };
+      const email = (emailIn as string).trim().toLowerCase();
+      lookupDisplay = email;
+
+      const reason = await prompt.text({
+        message: 'Why do you need this user\'s data? (logged to audit trail)',
+        placeholder: 'e.g. "support ticket #123" or "user reported GPS issue"',
+        validate: (v) => (v ?? '').trim().length < 5 ? 'Please provide a brief reason (5+ chars).' : undefined
+      });
+      if (prompt.isCancel(reason)) return { success: false, summary: 'Cancelled.' };
+
+      const lookup = await psqlPiped(ctx.config,
+        `SELECT id::text FROM auth.users WHERE lower(email) = '${email.replace(/'/g, "''")}' LIMIT 1;`,
+        'supabase_admin');
+      const match = lookup.stdout.match(/([0-9a-f-]{36})/);
+      if (!match) {
+        prompt.note(`No user found with email: ${email}`, 'Not found');
+        return { success: true, summary: `User ${email} not found.` };
+      }
+      userId = match[1];
+
+      // Log the access
+      await psqlPiped(ctx.config,
+        `INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+         VALUES ('konvo-admin-cli', 'inspect_by_email', '${userId}'::uuid, '${(reason as string).replace(/'/g, "''")}');`,
+        'supabase_admin');
+    }
+
+    // Now query pseudonymized views using the user_id
     const sql = `
 \\set QUIET on
 \\pset border 1
 \\pset format aligned
-\\echo SECTION:auth
-select id, email, email_confirmed_at::date as confirmed,
-       created_at::date as signed_up,
-       last_sign_in_at::date as last_seen
-from auth.users
-where lower(email) = '${sqlEsc}';
-
-\\echo SECTION:profile
-select platform_id,
-       display_name,
-       access_paid_at is not null as paid,
-       access_method,
-       playback_autoplay_recordings as autoplay,
-       playback_show_indicator      as badge_on
-from public.profiles p
-where p.id = (select id from auth.users where lower(email) = '${sqlEsc}');
+\\echo SECTION:user
+SELECT platform_id, masked_email, masked_name, tier, access_paid_at::date as paid_at,
+       access_method, signed_up_at::date, last_sign_in_at::date as last_seen,
+       banned_until
+FROM admin_users_safe WHERE id = '${userId}';
 
 \\echo SECTION:residency
-select r.type::text, r.status::text, r.is_active,
-       r.verified_via, r.verified_at::date,
-       r.requires_document_upload as needs_doc,
-       r.geofence_v2_pass_count   as v2_passes,
-       a.formatted as address
-from public.address_residencies r
-left join public.addresses a on a.id = r.address_id
-where r.user_id = (select id from auth.users where lower(email) = '${sqlEsc}')
-order by r.is_active desc, r.created_at desc;
+SELECT zone_id, type, status, is_active, verified_via, verified_at::date,
+       requires_document_upload as needs_doc, geofence_v2_pass_count as passes
+FROM admin_residencies_safe WHERE platform_id = (SELECT platform_id FROM profiles WHERE id = '${userId}');
 
 \\echo SECTION:geofence_checks
-select check_index,
-       attempted_at is not null as attempted,
+SELECT check_index,
+       attempted_at IS NOT NULL as attempted,
        passed,
        round(distance_m::numeric, 0) as dist_m,
        round(accuracy_m::numeric, 0) as acc_m,
        to_char(scheduled_for, 'MM-DD HH24:MI') as scheduled,
-       notification_sent_at is not null as notified
-from public.residency_geofence_checks
-where residency_id in (
-  select id from public.address_residencies
-  where user_id = (select id from auth.users where lower(email) = '${sqlEsc}')
-)
-order by check_index;
+       is_mock
+FROM admin_geofence_checks_safe
+WHERE platform_id = (SELECT platform_id FROM profiles WHERE id = '${userId}')
+ORDER BY check_index;
 
 \\echo SECTION:push_subs
-select id, device_label, last_used_at::date, failure_count, created_at::date
-from public.push_subscriptions
-where user_id = (select id from auth.users where lower(email) = '${sqlEsc}')
-order by created_at desc
-limit 10;
-
-\\echo SECTION:document_uploads
-select id, mime_type, size_bytes,
-       review_status, reviewed_at::date, created_at::date
-from public.document_uploads
-where user_id = (select id from auth.users where lower(email) = '${sqlEsc}')
-order by created_at desc
-limit 10;
+SELECT id, created_at::date
+FROM push_subscriptions
+WHERE user_id = '${userId}'
+ORDER BY created_at DESC LIMIT 5;
 `;
 
     const sp = prompt.spinner();
-    sp.start(`Looking up ${email}…`);
+    sp.start(`Looking up ${lookupDisplay}…`);
     const res = await psqlPiped(ctx.config, sql, 'supabase_admin');
     sp.stop('Done.');
 
     if (res.exitCode !== 0) {
       return {
         success: false,
-        summary: `psql exit ${res.exitCode}: ${res.stderr.trim().slice(0, 200)}`,
-        details: { email, exitCode: res.exitCode }
+        summary: `psql error: ${res.stderr.trim().slice(0, 200)}`,
       };
     }
 
-    // Split stdout by SECTION: marker, render each as a clack note.
+    // Render sections
     const sections = res.stdout.split(/^SECTION:/m).slice(1);
-    let userExists = false;
-
     for (const block of sections) {
       const newlineIdx = block.indexOf('\n');
       const name = block.slice(0, newlineIdx).trim();
       const body = block.slice(newlineIdx + 1).trim();
-
-      // If the auth block is empty, the user doesn't exist — bail with
-      // a friendly message rather than dumping six empty tables.
-      if (name === 'auth' && /\(0 rows\)/.test(body)) {
-        prompt.note(`No auth.users row found for ${email}.`, 'Not found');
-        return {
-          success: true,
-          summary: `User ${email} doesn't exist on prod.`,
-          details: { email, found: false }
-        };
-      }
-      if (name === 'auth') userExists = true;
-
       const title =
-        name === 'auth'              ? 'auth.users' :
-        name === 'profile'           ? 'profiles' :
-        name === 'residency'         ? 'address_residencies' :
-        name === 'geofence_checks'   ? 'residency_geofence_checks' :
-        name === 'push_subs'         ? 'push_subscriptions' :
-        name === 'document_uploads'  ? 'document_uploads' :
-                                       name;
-
+        name === 'user'            ? '👤 User (pseudonymized)' :
+        name === 'residency'       ? '🏠 Residency (zone only)' :
+        name === 'geofence_checks' ? '📍 Geofence Checks (no coordinates)' :
+        name === 'push_subs'       ? '🔔 Push Subscriptions' :
+                                     name;
       prompt.note(body || '(no rows)', title);
+    }
+
+    // Offer elevated access
+    const elevate = await prompt.confirm({
+      message: 'Need to see the real email or address? (will be logged)',
+      initialValue: false,
+    });
+
+    if (elevate) {
+      const reason = await prompt.text({
+        message: 'Reason for accessing raw PII:',
+        placeholder: 'e.g. "verifying address for support ticket"',
+        validate: (v) => (v ?? '').trim().length < 5 ? 'Reason required (5+ chars).' : undefined
+      });
+      if (!prompt.isCancel(reason)) {
+        const elevRes = await psqlPiped(ctx.config,
+          `SELECT admin_elevated_access(
+            '${userId}'::uuid,
+            'konvo-admin-cli',
+            '${(reason as string).replace(/'/g, "''")}',
+            ARRAY['email', 'address', 'name']
+          );`,
+          'supabase_admin');
+        prompt.note(elevRes.stdout.trim(), '🔓 Elevated Access (logged)');
+      }
     }
 
     return {
       success: true,
-      summary: userExists
-        ? `Inspection complete for ${email}.`
-        : `User ${email} not found.`,
-      details: { email, found: userExists }
+      summary: `Inspection complete for ${lookupDisplay}.`,
     };
   }
 };
