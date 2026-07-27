@@ -1,0 +1,11 @@
+Subject: Thanks for flagging — we took action
+---
+Hi {{display_name}},
+
+Thank you for flagging content on Konvo. We've reviewed the report and taken appropriate action.
+
+The details of the action taken are not shared to protect all parties involved, but know that your report made the platform safer.
+
+If you continue to experience issues with this user, you can block them or flag again.
+
+— Konvo Team

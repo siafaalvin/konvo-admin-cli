@@ -1,0 +1,11 @@
+Subject: Your account is back
+---
+Hi {{display_name}},
+
+Your Konvo account suspension has been lifted. You can now use the platform normally.
+
+Please be mindful of community guidelines going forward. Repeated suspensions result in escalating consequences.
+
+Welcome back.
+
+— Konvo Team

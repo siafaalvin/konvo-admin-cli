@@ -66,16 +66,20 @@ import markUserPaid from './runbooks/mark-user-paid.ts';
 import viewRecentPosts from './runbooks/view-recent-posts.ts';
 import resetVerificationZone from './runbooks/reset-verification-zone.ts';
 import viewAlerts from './runbooks/view-alerts.ts';
+import triage from './runbooks/triage.ts';
+import sendEmailTemplate from './runbooks/send-email-template.ts';
 import reviewBotReplies from './runbooks/review-bot-replies.ts';
 import manageIndexLists from './runbooks/manage-index-lists.ts';
 import manageWorkReleaseContent from './runbooks/manage-work-release-content.ts';
 
 const RUNBOOKS: Runbook[] = [
+  triage,
   checkSystemHealth,
   viewAlerts,
   reviewBotReplies,
   manageIndexLists,
   manageWorkReleaseContent,
+  sendEmailTemplate,
   smokeTest,
   viewRecentPosts,
   inspectUser,

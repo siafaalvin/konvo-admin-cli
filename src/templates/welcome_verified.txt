@@ -1,0 +1,9 @@
+Subject: Your address is verified! 🎉
+---
+Hi {{display_name}},
+
+Your address has been verified on Konvo. You now have full access to the platform — messaging, posting, and community features are all unlocked.
+
+Welcome to the neighborhood.
+
+— Konvo Team

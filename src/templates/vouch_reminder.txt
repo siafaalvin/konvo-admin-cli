@@ -1,0 +1,13 @@
+Subject: Someone's waiting for your vouch
+---
+Hi {{display_name}},
+
+A friend asked you to vouch for them on Konvo, and the request is expiring soon.
+
+Vouching means you trust this person and accept shared responsibility for their behavior. Only vouch for people you know personally.
+
+Review and accept (or decline) at: app.thekonvo.com/vouch
+
+This request expires in {{days_remaining}} days.
+
+— Konvo Team

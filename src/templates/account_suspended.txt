@@ -1,0 +1,14 @@
+Subject: Your account has been suspended
+---
+Hi {{display_name}},
+
+Your Konvo account has been temporarily suspended.
+
+Reason: {{reason}}
+Duration: {{duration}}
+
+During this period, you cannot post, message, or interact on the platform.
+
+You can appeal this suspension at app.thekonvo.com/appeals. Appeal options include paying a fine, completing educational tasks, or requesting a community poll.
+
+— Konvo Team

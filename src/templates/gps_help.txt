@@ -1,0 +1,19 @@
+Subject: Trouble verifying your location? Try this
+---
+Hi {{display_name}},
+
+We noticed your location checks aren't passing. Here are some tips:
+
+For Android:
+1. Settings → Location → turn ON "Google Location Accuracy"
+2. Settings → Apps → your browser → Permissions → Location → select "Precise"
+3. Try again outdoors or near a window
+
+For iPhone:
+1. Settings → Privacy → Location Services → ON
+2. Your browser → "While Using" + "Precise Location" ON
+3. Try again outdoors or near a window
+
+If location checks still don't work, you can try vouching instead — ask a friend on Konvo to verify you at app.thekonvo.com/vouch.
+
+— Konvo Team

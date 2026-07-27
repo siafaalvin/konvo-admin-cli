@@ -1,0 +1,13 @@
+Subject: Your post was removed
+---
+Hi {{display_name}},
+
+A post you made was removed from Konvo because it matched our content guidelines.
+
+Category: {{reason}}
+
+If you believe this was a mistake, you can appeal via Settings → Account Health → Appeals.
+
+Please review our community guidelines to avoid further actions on your account.
+
+— Konvo Team
