@@ -71,9 +71,13 @@ import sendEmailTemplate from './runbooks/send-email-template.ts';
 import reviewBotReplies from './runbooks/review-bot-replies.ts';
 import manageIndexLists from './runbooks/manage-index-lists.ts';
 import manageWorkReleaseContent from './runbooks/manage-work-release-content.ts';
+import reviewNextFlag from './runbooks/review-next-flag.ts';
+import approveAppeal from './runbooks/approve-appeal.ts';
 
 const RUNBOOKS: Runbook[] = [
   triage,
+  reviewNextFlag,
+  approveAppeal,
   checkSystemHealth,
   viewAlerts,
   reviewBotReplies,
