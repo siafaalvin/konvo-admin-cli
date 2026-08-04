@@ -44,14 +44,18 @@ const runbook: Runbook = {
 
     // 2. Look up user and their pending residencies
     const sqlEsc = email.replace(/'/g, `''`);
+    // Quiet/format pragmas MUST come before the audit INSERT — otherwise psql
+    // emits the INSERT's "INSERT 0 1" command tag into stdout ahead of the
+    // SELECT row, and it gets captured as part of the user id.
     const lookupSql = `
+\\set QUIET on
+\\pset format unaligned
+\\pset tuples_only on
+
 INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
 SELECT 'konvo-admin-cli:verify-address-manually', 'email_lookup', au.id, 'manual address verification'
 FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
 
-\\set QUIET on
-\\pset format unaligned
-\\pset tuples_only on
 SELECT au.id::text
 FROM auth.users au
 WHERE lower(au.email) = '${sqlEsc}';
@@ -66,7 +70,9 @@ WHERE lower(au.email) = '${sqlEsc}';
       return { success: false, summary: `Database error: ${userRes.stderr.trim().slice(0, 150)}` };
     }
 
-    const userId = userRes.stdout.trim();
+    // Take the last non-empty line so any stray psql output (e.g. a command
+    // tag that slipped through) can never contaminate the uuid.
+    const userId = userRes.stdout.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? '';
     if (!userId) {
       prompt.note(`No account found for ${email}.`, 'Not found');
       return { success: false, summary: `User ${email} not found.` };
