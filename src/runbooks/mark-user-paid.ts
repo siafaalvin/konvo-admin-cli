@@ -52,13 +52,13 @@ const runbook: Runbook = {
     // 2. Look up user and current payment status
     const sqlEsc = email.replace(/'/g, `''`);
     const lookupSql = `
-INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
-SELECT 'konvo-admin-cli:mark-user-paid', 'email_lookup', au.id, 'mark user paid'
-FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
-
 \\set QUIET on
 \\pset format unaligned
 \\pset tuples_only on
+
+INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+SELECT 'konvo-admin-cli:mark-user-paid', 'email_lookup', au.id, 'mark user paid'
+FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
 SELECT au.id::text || '|||' ||
        coalesce(p.access_paid_at::text, 'not_paid') || '|||' ||
        coalesce(p.access_method, 'none') || '|||' ||
@@ -77,7 +77,7 @@ WHERE lower(au.email) = '${sqlEsc}';
       return { success: false, summary: `Database error: ${lookupRes.stderr.trim().slice(0, 150)}` };
     }
 
-    const row = lookupRes.stdout.trim();
+    const row = lookupRes.stdout.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? '';
     if (!row) {
       prompt.note(`No account found for ${email}.`, 'Not found');
       return { success: false, summary: `User ${email} not found.` };

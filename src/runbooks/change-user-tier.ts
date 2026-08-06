@@ -52,13 +52,13 @@ const runbook: Runbook = {
     // 2. Look up the user and their current tier
     const sqlEsc = email.replace(/'/g, `''`);
     const lookupSql = `
-INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
-SELECT 'konvo-admin-cli:change-user-tier', 'email_lookup', au.id, 'tier change'
-FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
-
 \\set QUIET on
 \\pset format unaligned
 \\pset tuples_only on
+
+INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+SELECT 'konvo-admin-cli:change-user-tier', 'email_lookup', au.id, 'tier change'
+FROM auth.users au WHERE lower(au.email) = lower('${sqlEsc}');
 SELECT coalesce(p.tier, 'none') || '|' || au.id::text
 FROM auth.users au
 LEFT JOIN public.profiles p ON p.id = au.id
@@ -74,7 +74,7 @@ WHERE lower(au.email) = '${sqlEsc}';
       return { success: false, summary: `Database error: ${lookupRes.stderr.trim().slice(0, 150)}` };
     }
 
-    const row = lookupRes.stdout.trim();
+    const row = lookupRes.stdout.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? '';
     if (!row) {
       prompt.note(`No account found for ${email}.`, 'Not found');
       return { success: false, summary: `User ${email} not found.` };

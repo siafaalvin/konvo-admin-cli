@@ -45,13 +45,13 @@ const runbook: Runbook = {
 
     // 2. Look up the post
     const lookupSql = `
-INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
-SELECT 'konvo-admin-cli:delete-post', 'email_lookup', posts.author_id, 'delete post'
-FROM posts WHERE posts.id = '${postId}';
-
 \\set QUIET on
 \\pset format unaligned
 \\pset tuples_only on
+
+INSERT INTO admin_audit_log (accessor, action, target_user_id, reason)
+SELECT 'konvo-admin-cli:delete-post', 'email_lookup', posts.author_id, 'delete post'
+FROM posts WHERE posts.id = '${postId}';
 SELECT
   p.content || '|||' ||
   coalesce(u.username, 'unknown') || '|||' ||
@@ -73,7 +73,7 @@ WHERE p.id = '${postId}';
       return { success: false, summary: `Database error: ${lookupRes.stderr.trim().slice(0, 150)}` };
     }
 
-    const row = lookupRes.stdout.trim();
+    const row = lookupRes.stdout.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? '';
     if (!row) {
       prompt.note('No post found with that ID.', 'Not found');
       return { success: false, summary: `Post ${postId} not found.` };
