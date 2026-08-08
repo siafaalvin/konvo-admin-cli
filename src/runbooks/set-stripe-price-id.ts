@@ -46,6 +46,8 @@ interface SkuSlot {
  * deploy script's load_v2_price call relies on this exact mapping.
  */
 const SKU_CATALOG: ReadonlyArray<SkuSlot> = [
+  // Single-feature address tiers (band-agnostic annual)
+  { slot: 'mailbox-plus',            envVar: 'STRIPE_PRICE_MAILBOX_PLUS',            description: 'Mailbox+ (HouseCall messaging)', hint: '$5.00/year' },
   // Standard tier band
   { slot: 'standard-floor',          envVar: 'STRIPE_PRICE_STANDARD_FLOOR',          description: 'Standard $1 (floor)',           hint: '$1.00 one-time' },
   { slot: 'standard-resident',       envVar: 'STRIPE_PRICE_STANDARD_RESIDENT',       description: 'Standard Resident',             hint: '$10.00 one-time' },
