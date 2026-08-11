@@ -38,6 +38,7 @@ import inspectDatabaseGucs from './runbooks/inspect-database-gucs.ts';
 import verifyWorkerEnv from './runbooks/verify-worker-env.ts';
 import diagnoseRolePermissions from './runbooks/diagnose-role-permissions.ts';
 import applyMigration from './runbooks/apply-migration.ts';
+import applySearchOptimization from './runbooks/apply-search-optimization.ts';
 import testWorkerDispatch from './runbooks/test-worker-dispatch.ts';
 import syncStripeCatalog from './runbooks/sync-stripe-catalog.ts';
 import manageAdminGrants from './runbooks/manage-admin-grants.ts';
@@ -94,6 +95,7 @@ const RUNBOOKS: Runbook[] = [
   resetVerificationZone,
   deletePost,
   createSystemPost,
+  applySearchOptimization,
   confirmStuckUser,
   manageAdminGrants,
   bulkAddUserGrants,
