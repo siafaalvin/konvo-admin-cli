@@ -63,7 +63,7 @@ function buildReceiptHtml(row: ReceiptRow): string {
       </div>
       <p style="font-size: 14px; color: #666; text-align: center;">
         Your account is ready at<br/>
-        <a href="https://app.thekonvo.com" style="color: #FF733E;">app.thekonvo.com</a>
+        <a href="https://app.thekonvo.com/login?tab=signup" style="color: #FF733E;">app.thekonvo.com</a>
       </p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
       <p style="font-size: 11px; color: #999; text-align: center;">Konvo — thekonvo.com</p>
