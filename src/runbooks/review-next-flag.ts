@@ -44,14 +44,14 @@ const runbook: Runbook = {
 
     if (!result.stdout.trim() || result.stdout.includes('(0 rows)')) {
       prompt.note('✅ No pending flags! Queue is clear.', '🎉 All clear');
-      return { ok: true, summary: 'No pending flags.' };
+      return { success: true, summary: 'No pending flags.' };
     }
 
     // Parse and display
     const lines = result.stdout.trim().split('\n').filter(l => l.includes('|'));
     if (lines.length === 0) {
       prompt.note('✅ No pending flags!', '🎉 All clear');
-      return { ok: true, summary: 'No pending flags.' };
+      return { success: true, summary: 'No pending flags.' };
     }
 
     const values = lines[0].split('|').map(v => v.trim());
@@ -84,12 +84,12 @@ const runbook: Runbook = {
     });
 
     if (prompt.isCancel(action) || action === 'skip') {
-      return { ok: true, summary: 'Skipped flag review.' };
+      return { success: true, summary: 'Skipped flag review.' };
     }
 
     if (dryRun) {
       prompt.note(`[DRY RUN] Would apply action: ${action} to flag ${flagId}`, '🏷️ Training Mode');
-      return { ok: true, summary: `[DRY RUN] Action: ${action}` };
+      return { success: true, summary: `[DRY RUN] Action: ${action}` };
     }
 
     // Execute action
@@ -117,7 +117,7 @@ const runbook: Runbook = {
     }
 
     sp.stop(`✅ Action applied: ${action}`);
-    return { ok: true, summary: `Applied ${action} to flag ${flagId}` };
+    return { success: true, summary: `Applied ${action} to flag ${flagId}` };
   }
 };
 

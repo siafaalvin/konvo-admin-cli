@@ -29,7 +29,7 @@ const runbook: Runbook = {
     });
 
     if (typeof filter !== 'string') {
-      return { ok: false, summary: 'Cancelled.' };
+      return { success: false, summary: 'Cancelled.' };
     }
 
     let whereClause = "created_at > now() - interval '7 days'";
@@ -37,7 +37,7 @@ const runbook: Runbook = {
     if (filter === 'errors') whereClause += " AND severity = 'error'";
     if (filter === 'critical') whereClause += " AND severity = 'critical'";
 
-    const result = await psqlPiped(ctx, `
+    const result = await psqlPiped(ctx.config, `
       SELECT id, severity, source, title,
              to_char(created_at, 'Mon DD HH24:MI') as "when",
              CASE WHEN acknowledged_at IS NOT NULL THEN '✓' ELSE '•' END as status
@@ -48,7 +48,7 @@ const runbook: Runbook = {
     `);
 
     if (!result.stdout?.trim()) {
-      return { ok: true, summary: '🎉 No alerts! Everything is running smoothly.' };
+      return { success: true, summary: '🎉 No alerts! Everything is running smoothly.' };
     }
 
     console.log('\n' + result.stdout);
@@ -59,15 +59,15 @@ const runbook: Runbook = {
     });
 
     if (markRead) {
-      await psqlPiped(ctx, `
+      await psqlPiped(ctx.config, `
         UPDATE public.system_alerts
         SET acknowledged_at = now()
         WHERE ${whereClause} AND acknowledged_at IS NULL;
       `);
-      return { ok: true, summary: 'Alerts displayed and marked as seen.' };
+      return { success: true, summary: 'Alerts displayed and marked as seen.' };
     }
 
-    return { ok: true, summary: 'Alerts displayed.' };
+    return { success: true, summary: 'Alerts displayed.' };
   },
 };
 

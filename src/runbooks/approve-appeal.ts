@@ -39,13 +39,13 @@ const runbook: Runbook = {
 
     if (!result.stdout.trim() || result.stdout.includes('(0 rows)')) {
       prompt.note('✅ No pending appeals! Queue is clear.', '🎉 All clear');
-      return { ok: true, summary: 'No pending appeals.' };
+      return { success: true, summary: 'No pending appeals.' };
     }
 
     const lines = result.stdout.trim().split('\n').filter(l => l.includes('|'));
     if (lines.length === 0) {
       prompt.note('✅ No pending appeals!', '🎉 All clear');
-      return { ok: true, summary: 'No pending appeals.' };
+      return { success: true, summary: 'No pending appeals.' };
     }
 
     const values = lines[0].split('|').map(v => v.trim());
@@ -75,12 +75,12 @@ const runbook: Runbook = {
     });
 
     if (prompt.isCancel(action) || action === 'skip') {
-      return { ok: true, summary: 'Skipped appeal review.' };
+      return { success: true, summary: 'Skipped appeal review.' };
     }
 
     if (dryRun) {
       prompt.note(`[DRY RUN] Would ${action} appeal ${appealId}`, '🏷️ Training Mode');
-      return { ok: true, summary: `[DRY RUN] Decision: ${action}` };
+      return { success: true, summary: `[DRY RUN] Decision: ${action}` };
     }
 
     sp.start(`Applying decision: ${action}…`);
@@ -98,7 +98,7 @@ const runbook: Runbook = {
     }
 
     sp.stop(`✅ Appeal ${action === 'approve' ? 'approved' : 'denied'}.`);
-    return { ok: true, summary: `Appeal ${appealId}: ${action}` };
+    return { success: true, summary: `Appeal ${appealId}: ${action}` };
   }
 };
 

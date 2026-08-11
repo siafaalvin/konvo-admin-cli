@@ -168,7 +168,6 @@ WHERE lower(au.email) = '${sqlEsc}';
     }
 
     // 5. Apply the change
-    const reasonEsc = reason.replace(/'/g, `''`);
     let updateSql = `
 UPDATE public.profiles
 SET access_paid_at = now(),

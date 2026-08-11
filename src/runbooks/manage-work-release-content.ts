@@ -63,11 +63,11 @@ const runbook: Runbook = {
       const res = await psqlPiped(ctx.config, `
         SELECT left(id::text, 8) as id, title, estimated_minutes as mins, difficulty, is_active
         FROM work_release_content
-        WHERE content_type = 'article' AND category = '${category}'
+        WHERE content_type = 'article' AND category = '${(category as string)}'
         ORDER BY created_at;
       `, 'supabase_admin');
       sp.stop('Done.');
-      prompt.note(res.stdout.trim() || '(none)', `Articles: ${category}`);
+      prompt.note(res.stdout.trim() || '(none)', `Articles: ${(category as string)}`);
       return { success: true, summary: 'Listed.' };
     }
 
@@ -89,13 +89,13 @@ const runbook: Runbook = {
 
       if (typeof title !== 'string' || typeof body !== 'string') return { success: false, summary: 'Cancelled.' };
 
-      if (ctx.dryRun) return { success: true, summary: `Dry-run: would add "${title}" to ${category}` };
+      if (ctx.dryRun) return { success: true, summary: `Dry-run: would add "${title}" to ${(category as string)}` };
 
       sp.start('Adding article…');
       const escaped = (body as string).replace(/'/g, "''");
       const res = await psqlPiped(ctx.config, `
         INSERT INTO work_release_content (content_type, category, title, body, estimated_minutes, difficulty)
-        VALUES ('article', '${category}', '${(title as string).replace(/'/g, "''")}', '${escaped}', ${mins || 5}, ${diff});
+        VALUES ('article', '${(category as string)}', '${(title as string).replace(/'/g, "''")}', '${escaped}', ${(mins as string) || 5}, ${(diff as string)});
       `, 'supabase_admin');
       sp.stop('Done.');
       return { success: res.exitCode === 0, summary: res.exitCode === 0 ? `Added "${title}"` : `Error: ${res.stderr.slice(0, 100)}` };
@@ -114,10 +114,10 @@ const runbook: Runbook = {
       const quizJson = JSON.stringify({ options: [optA, optB, optC, optD], correct: parseInt(correct as string) });
 
       sp.start('Adding question…');
-      const res = await psqlPiped(ctx.config, `
+      await psqlPiped(ctx.config, `
         INSERT INTO work_release_content (content_type, category, title, body, parent_content_id, quiz_options, difficulty)
         SELECT 'quiz_question', wc.category, 'Q', '${(question as string).replace(/'/g, "''")}', wc.id, '${quizJson}'::jsonb, 2
-        FROM work_release_content wc WHERE wc.id::text LIKE '${articleId}%' AND wc.content_type = 'article' LIMIT 1;
+        FROM work_release_content wc WHERE wc.id::text LIKE '${(articleId as string)}%' AND wc.content_type = 'article' LIMIT 1;
       `, 'supabase_admin');
       sp.stop('Done.');
       return { success: true, summary: 'Quiz question added.' };
@@ -140,9 +140,9 @@ const runbook: Runbook = {
       if (typeof title !== 'string' || typeof body !== 'string') return { success: false, summary: 'Cancelled.' };
 
       sp.start('Adding passage…');
-      const res = await psqlPiped(ctx.config, `
+      await psqlPiped(ctx.config, `
         INSERT INTO work_release_content (content_type, category, title, body, estimated_minutes, difficulty)
-        VALUES ('transcription_passage', '${category}', '${(title as string).replace(/'/g, "''")}', '${(body as string).replace(/'/g, "''")}', 2, 2);
+        VALUES ('transcription_passage', '${(category as string)}', '${(title as string).replace(/'/g, "''")}', '${(body as string).replace(/'/g, "''")}', 2, 2);
       `, 'supabase_admin');
       sp.stop('Done.');
       return { success: true, summary: `Passage added: "${title}"` };
@@ -153,8 +153,8 @@ const runbook: Runbook = {
       if (typeof contentId !== 'string') return { success: false, summary: 'Cancelled.' };
 
       sp.start('Deactivating…');
-      const res = await psqlPiped(ctx.config, `
-        UPDATE work_release_content SET is_active = false WHERE id::text LIKE '${contentId}%';
+      await psqlPiped(ctx.config, `
+        UPDATE work_release_content SET is_active = false WHERE id::text LIKE '${(contentId as string)}%';
       `, 'supabase_admin');
       sp.stop('Done.');
       return { success: true, summary: 'Content deactivated.' };
@@ -167,7 +167,7 @@ const runbook: Runbook = {
       sp.start('Loading…');
       const res = await psqlPiped(ctx.config, `
         SELECT title, category, left(body, 500) as preview, estimated_minutes
-        FROM work_release_content WHERE id::text LIKE '${contentId}%' LIMIT 1;
+        FROM work_release_content WHERE id::text LIKE '${(contentId as string)}%' LIMIT 1;
       `, 'supabase_admin');
       sp.stop('Done.');
       prompt.note(res.stdout.trim() || '(not found)', 'Preview');

@@ -104,21 +104,21 @@ const runbook: Runbook = {
         const groups = (inGroups as string || '').split(',').map(g => g.trim()).filter(Boolean);
 
         const contextObj: Record<string, unknown> = {};
-        if (threatCheck) contextObj.threat_context_check = true;
-        if (groups.length) contextObj.in_group_communities = groups;
+        if (threatCheck) contextObj["threat_context_check"] = true;
+        if (groups.length) contextObj["in_group_communities"] = groups;
         if (Object.keys(contextObj).length) {
           contextJson = `'${JSON.stringify(contextObj)}'::jsonb`;
         }
       }
 
       if (ctx.dryRun) {
-        return { success: true, summary: `Dry-run: would add "${term}" to ${listType} (${matchType}, severity ${severity})` };
+        return { success: true, summary: `Dry-run: would add "${(term as string)}" to ${listType} (${(matchType as string)}, severity ${(severity as string)})` };
       }
 
       sp.start('Adding term…');
       const res = await psqlPiped(ctx.config, `
         INSERT INTO index_list_terms (list_id, term, match_type, severity, context_exempt)
-        SELECT l.id, '${(term as string).replace(/'/g, "''")}', '${matchType}', ${severity}, ${contextJson}
+        SELECT l.id, '${(term as string).replace(/'/g, "''")}', '${(matchType as string)}', ${(severity as string)}, ${contextJson}
         FROM index_lists l WHERE l.type = '${listType}' LIMIT 1;
       `, 'supabase_admin');
       sp.stop('Done.');
@@ -126,7 +126,7 @@ const runbook: Runbook = {
       if (res.exitCode !== 0) {
         return { success: false, summary: `Failed: ${res.stderr.slice(0, 100)}` };
       }
-      return { success: true, summary: `Added "${term}" to ${listType} list.` };
+      return { success: true, summary: `Added "${(term as string)}" to ${listType} list.` };
     }
 
     if (action === 'remove') {
@@ -134,11 +134,11 @@ const runbook: Runbook = {
       if (typeof term !== 'string') return { success: false, summary: 'Cancelled.' };
 
       sp.start('Removing…');
-      const res = await psqlPiped(ctx.config, `
+      await psqlPiped(ctx.config, `
         DELETE FROM index_list_terms WHERE term = '${(term as string).replace(/'/g, "''")}';
       `, 'supabase_admin');
       sp.stop('Done.');
-      return { success: true, summary: `Removed "${term}" from all lists.` };
+      return { success: true, summary: `Removed "${(term as string)}" from all lists.` };
     }
 
     if (action === 'hits') {
