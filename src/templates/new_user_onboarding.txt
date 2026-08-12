@@ -1,0 +1,17 @@
+Subject: Finish setting up your Konvo account
+---
+Hi {{display_name}},
+
+Thanks for signing up for Konvo! It looks like you may not have seen our confirmation email — it sometimes lands in the Promotions tab or spam folder.
+
+Here's how to pick up where you left off:
+
+1. Search your inbox (including Promotions and spam) for "hello@thekonvo.com"
+2. Add hello@thekonvo.com to your contacts so our emails reach you
+3. Head to app.thekonvo.com/login to sign in and finish setting up
+
+If you still can't get in — or you never received the confirmation at all — just reply to this email and we'll sort it out for you.
+
+Glad to have you here.
+
+— Konvo Team

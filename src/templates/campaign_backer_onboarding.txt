@@ -1,0 +1,21 @@
+Subject: Your Konvo backer access is ready — let's get you in
+---
+Hi {{display_name}},
+
+Thank you for backing Konvo — your support means a lot, and your backer access is active and waiting for you.
+
+We sent a confirmation when your pledge went through, but it may have landed in your Promotions tab or spam folder, so here's everything you need to get started.
+
+Setting up your account takes about a minute:
+
+1. Go to app.thekonvo.com/login?tab=signup
+2. Sign up using THIS email address ({{email}}) — that's what unlocks your backer access
+3. Verify your address and you're in
+
+A quick tip: add hello@thekonvo.com to your contacts so our emails land in your inbox.
+
+If you hit any snags, just reply to this email and we'll help you get set up.
+
+Welcome to the neighborhood.
+
+— Konvo Team
