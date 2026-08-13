@@ -3,7 +3,7 @@
  * after a successful mutation so we have a record of who did what,
  * when, and against which target.
  *
- * Writes go to public.admin_audit_log on prod via the same SSH+psql
+ * Writes go to public.admin_cli_audit_log on prod via the same SSH+psql
  * channel runbooks already use — no separate Postgres connection
  * required, and the runbook's `requires: ['ssh']` already covers
  * audit-write capability.
@@ -14,9 +14,15 @@
  * couldn't log it would be worse than losing the audit trail for
  * one row.
  *
- * Schema reference (houvox-pwa migration 0033):
- *   admin_audit_log (id bigserial pk, operator, runbook_id, action,
- *                    target, metadata jsonb, dry_run, created_at)
+ * Schema reference (houvox-pwa migration 0108_admin_cli_audit_log):
+ *   admin_cli_audit_log (id bigserial pk, operator, runbook_id, action,
+ *                        target, metadata jsonb, dry_run, created_at)
+ *
+ * NOTE: this is deliberately NOT public.admin_audit_log — that name is
+ * owned by migration 0080 (the immutable PII-access audit, a different
+ * schema). Migration 0033 originally tried to claim admin_audit_log for
+ * the CLI log but lost the name collision to 0080 in prod, so every CLI
+ * audit write silently failed until 0108 gave this log its own table.
  */
 
 import { psqlPiped } from './ssh.ts';
@@ -50,7 +56,7 @@ export async function writeAudit(
     : 'null::jsonb';
 
   const sql = `
-insert into public.admin_audit_log
+insert into public.admin_cli_audit_log
   (operator, runbook_id, action, target, metadata, dry_run)
 values
   (${q(operator)}, ${q(entry.runbookId)}, ${q(entry.action)}, ${target}, ${metadata}, ${entry.dryRun ? 'true' : 'false'});
