@@ -14,15 +14,21 @@
  * couldn't log it would be worse than losing the audit trail for
  * one row.
  *
- * Schema reference (houvox-pwa migration 0108_admin_cli_audit_log):
- *   admin_cli_audit_log (id bigserial pk, operator, runbook_id, action,
- *                        target, metadata jsonb, dry_run, created_at)
+ * Schema reference:
+ *   admin_cli_audit_log (id bigint pk default nextval('admin_audit_log_id_seq'),
+ *                        operator, runbook_id, action, target,
+ *                        metadata jsonb, dry_run, created_at)
  *
- * NOTE: this is deliberately NOT public.admin_audit_log — that name is
- * owned by migration 0080 (the immutable PII-access audit, a different
- * schema). Migration 0033 originally tried to claim admin_audit_log for
- * the CLI log but lost the name collision to 0080 in prod, so every CLI
- * audit write silently failed until 0108 gave this log its own table.
+ * NOTE: this is deliberately NOT public.admin_audit_log. History:
+ * migration 0033 created admin_audit_log for the CLI log; migration 0080
+ * later created its own admin_audit_log (CREATE TABLE IF NOT EXISTS) for
+ * the immutable PII-access audit — a different, incompatible schema. In
+ * prod the collision was resolved by renaming 0033's table to
+ * admin_cli_audit_log (it kept its original sequence, admin_audit_log_id_seq),
+ * leaving admin_audit_log to 0080. So the CLI log's table already exists in
+ * prod with the correct shape; this writer just needs to target the right
+ * name. (A migration to create admin_cli_audit_log was attempted as 0108 but
+ * removed — prod already had the table, so no migration was needed.)
  */
 
 import { psqlPiped } from './ssh.ts';
