@@ -56,9 +56,10 @@ interface PreviewResult {
 }
 
 const ACTION_OPTIONS = [
-  { value: 'fine',        label: 'Issue a fine',        hint: 'Fixed dollar amount, cascades 50/50 in vouch groups' },
-  { value: 'suspension',  label: 'Issue a suspension',  hint: 'Duration-based read-only; cascades full duration' },
-  { value: '__exit',      label: c.dim('Cancel'),       hint: c.dim('Return to main menu') }
+  { value: 'fine',               label: 'Issue a fine',               hint: 'Fixed dollar amount, cascades 50/50 in vouch groups' },
+  { value: 'suspension',         label: 'Issue a suspension',         hint: 'Duration-based read-only; cascades full duration' },
+  { value: 'location_probation', label: 'Issue location probation',   hint: 'N daily location check-ins; miss the window → restricted' },
+  { value: '__exit',             label: c.dim('Cancel'),              hint: c.dim('Return to main menu') }
 ] as const;
 
 const runbook: Runbook = {
@@ -80,8 +81,9 @@ const runbook: Runbook = {
       return { success: false, summary: 'Operator cancelled.' };
     }
 
-    if (action === 'fine')        return issueFine(ctx);
-    if (action === 'suspension')  return issueSuspension(ctx);
+    if (action === 'fine')               return issueFine(ctx);
+    if (action === 'suspension')         return issueSuspension(ctx);
+    if (action === 'location_probation') return issueLocationProbation(ctx);
     return { success: false, summary: `Unknown action: ${action as string}` };
   }
 };
@@ -362,6 +364,114 @@ async function issueSuspension(ctx: RunbookContext): Promise<RunbookResult> {
     success: true,
     summary: `Suspended ${email} for ${durationStr}.${preview && preview.group_count > 0 ? ` Cascade applied to ${preview.group_count} vouch group(s).` : ''}`,
     details: { email, user_id: userId, duration_days: days, ends_at: endsAtIso, reason, cascade_group_count: preview?.group_count ?? 0 }
+  };
+}
+
+// ─── location probation flow ─────────────────────────────────────────────
+// Individual (no vouch-group cascade): opens a `punitive` verification demand
+// of N daily location check-ins via houvox-pwa migration 0132.
+
+async function issueLocationProbation(ctx: RunbookContext): Promise<RunbookResult> {
+  const { prompt } = ctx;
+
+  const emailIn = await prompt.text({
+    message: 'Target user email',
+    validate: (v) => {
+      const s = (v ?? '').trim();
+      if (!s) return 'Required.';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return 'Not a valid email.';
+      return undefined;
+    }
+  });
+  if (prompt.isCancel(emailIn)) { prompt.cancel('Cancelled.'); return { success: false, summary: 'Operator cancelled.' }; }
+  const email = (emailIn as string).trim().toLowerCase();
+
+  const lookupSp = prompt.spinner();
+  lookupSp.start('Looking up user…');
+  const userId = await lookupUserId(ctx, email);
+  if (!userId) {
+    lookupSp.stop('Not found.');
+    return { success: false, summary: `No user with email ${email}.` };
+  }
+  lookupSp.stop(`User: ${userId}`);
+
+  const daysIn = await prompt.text({
+    message: 'Probation length in days (= number of daily check-ins required)',
+    validate: (v) => {
+      const n = Number((v ?? '').trim());
+      if (!Number.isFinite(n) || n <= 0) return 'Must be a positive integer.';
+      if (n > 90) return 'Refusing — over 90 days needs escalation.';
+      return undefined;
+    }
+  });
+  if (prompt.isCancel(daysIn)) { prompt.cancel('Cancelled.'); return { success: false, summary: 'Operator cancelled.' }; }
+  const days = Math.floor(Number(daysIn as string));
+
+  const reasonIn = await prompt.text({
+    message: 'Reason (visible to user)',
+    validate: (v) => ((v ?? '').trim().length === 0 ? 'Required.' : undefined)
+  });
+  if (prompt.isCancel(reasonIn)) { prompt.cancel('Cancelled.'); return { success: false, summary: 'Operator cancelled.' }; }
+  const reason = (reasonIn as string).trim();
+
+  prompt.note(
+    [
+      `User must complete ${c.brand(`${days} daily location check-in${days === 1 ? '' : 's'}`)} at their registered address.`,
+      `Window: ${days} day${days === 1 ? '' : 's'} + 2-day grace. Missing it → residency ${c.yellow('restricted')} (no posting / new conversations).`,
+      c.dim('No vouch-group cascade — location probation is individual.')
+    ].join('\n'),
+    'Location probation'
+  );
+
+  const confirmed = await prompt.confirm({
+    message: `Place ${email} on ${days}-day location probation?`,
+    initialValue: false
+  });
+  if (prompt.isCancel(confirmed) || !confirmed) {
+    prompt.cancel('Aborted.');
+    return { success: false, summary: 'Operator did not confirm.' };
+  }
+
+  if (ctx.dryRun) {
+    return {
+      success: true,
+      summary: `Dry-run: would have placed ${email} on ${days}-day location probation.`,
+      details: { email, user_id: userId, days, reason, dryRun: true }
+    };
+  }
+
+  const sqlEsc = (s: string): string => s.replace(/'/g, `''`);
+  const sql = `select public.issue_location_probation(
+  '${userId}'::uuid,
+  ${days},
+  '${sqlEsc(reason)}',
+  '${sqlEsc(ctx.config.operator)}',
+  'admin-runbook:issue-punitive-action'
+);`;
+  const sp = prompt.spinner();
+  sp.start('Issuing location probation…');
+  const res = await psqlPiped(ctx.config, sql, 'supabase_admin');
+  if (res.exitCode !== 0) {
+    sp.stop('Failed.');
+    return { success: false, summary: `psql exit ${res.exitCode}: ${res.stderr.trim().slice(0, 200)}` };
+  }
+  sp.stop('Location probation issued.');
+
+  const audit = await writeAudit(ctx.config, {
+    runbookId: 'issue-punitive-action',
+    action:    'location-probation-issued',
+    target:    email,
+    metadata:  { email, user_id: userId, days, reason },
+    dryRun:    ctx.dryRun
+  });
+  if (!audit.ok) {
+    prompt.note(c.yellow(`Audit log write failed (operation succeeded): ${audit.error}`), 'Warning');
+  }
+
+  return {
+    success: true,
+    summary: `Placed ${email} on ${days}-day location probation (${days} daily check-in${days === 1 ? '' : 's'}).`,
+    details: { email, user_id: userId, days, reason }
   };
 }
 
