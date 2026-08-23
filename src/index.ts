@@ -45,6 +45,7 @@ import manageAdminGrants from './runbooks/manage-admin-grants.ts';
 import runSignupLoadTest from './runbooks/run-signup-load-test.ts';
 import toggleWaitlist from './runbooks/toggle-waitlist.ts';
 import issuePunitiveAction from './runbooks/issue-punitive-action.ts';
+import toggleSoftSignalMode from './runbooks/toggle-soft-signal-mode.ts';
 import manageBuildingHolds from './runbooks/manage-building-holds.ts';
 import manageBannedTerms from './runbooks/manage-banned-terms.ts';
 import reviewFlaggedPlateMessages from './runbooks/review-flagged-plate-messages.ts';
@@ -106,6 +107,7 @@ const RUNBOOKS: Runbook[] = [
   reviewFlaggedPlateMessages,
   toggleWaitlist,
   issuePunitiveAction,
+  toggleSoftSignalMode,
   setStripePriceId,
   redeployWorker,
   deployCoolifyApp,
